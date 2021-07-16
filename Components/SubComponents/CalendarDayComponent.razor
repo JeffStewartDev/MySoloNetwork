@@ -1,0 +1,62 @@
+
+@namespace MSN.Components.SubComponents
+@using MSN.BlazorServer.Util.Enums
+<div class="card h-100 m-1">
+    <div class="card-header font-weight-bold p-1 m-1" style="background-color: transparent;">
+            <div class="p-0 m-0">
+                @if (item?.Date.Year>1950) {@item.Date.Day}
+        </div>
+    </div>
+    <div class="card-body">
+        @{
+            int albumCount = item.Posts.Where(x => x.PostType == MSN.Model.PostTypes.Album).Count();
+            int imageCount = item.Posts.Where(x => x.PostType == MSN.Model.PostTypes.Image).Count();
+            int noteCount = item.Posts.Where(x => x.PostType == MSN.Model.PostTypes.Note).Count();
+            int postCount = item.Posts.Where(x => x.PostType == MSN.Model.PostTypes.StatusUpdate).Count();
+            int eventCount = item.Posts.Where(x => x.PostType == MSN.Model.PostTypes.Event).Count();
+        }
+        @if (postCount != 0)
+        {
+            <div class="text-primary mb-3" style="cursor:pointer;" @onclick="() => HandleItemClicked(CalendarItemSelected.Post)">
+                @Pluralize("Post", postCount)
+            </div>
+        }
+        @if (albumCount != 0)
+        {
+            <div class="text-primary mb-3" style="cursor:pointer;" @onclick="() => HandleItemClicked(CalendarItemSelected.Album)">@Pluralize("Album", albumCount) </div>
+        }
+        @if (imageCount != 0)
+        {
+            <div class="text-primary mb-3" style="cursor:pointer;" @onclick="() => HandleItemClicked(CalendarItemSelected.Image)">@Pluralize("Image", imageCount) </div>
+        }
+        @if (noteCount != 0)
+        {
+            <div class="text-primary mb-3" style="cursor:pointer;" @onclick="() => HandleItemClicked(CalendarItemSelected.Note)">@Pluralize("Note", noteCount) </div>
+        }
+        @if (eventCount != 0)
+        {
+            <div class="text-primary mb-3" style="cursor:pointer;" @onclick="() => HandleItemClicked(CalendarItemSelected.Event)">@Pluralize("Event", eventCount) </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public MSN.ViewModel.Util.CalendarDay item { get; set; }
+    [Parameter]
+    public EventCallback<KeyValuePair<CalendarItemSelected, MSN.ViewModel.Util.CalendarDay>> ItemSelected { get; set; } = new EventCallback<KeyValuePair<CalendarItemSelected, MSN.ViewModel.Util.CalendarDay>>();
+    [Inject]
+    public Microsoft.JSInterop.IJSRuntime jSRuntime { get; set; }
+
+    protected MarkupString Pluralize(string word, int count)
+    {
+        return new MarkupString("<b>" + count.ToString() + "</b>&nbsp;" + word + (count > 1 ? "s" : string.Empty));
+    }
+    protected async void HandleItemClicked(CalendarItemSelected itemSelected)
+    {
+        await jSRuntime.InvokeVoidAsync("toTheTop");
+        KeyValuePair<CalendarItemSelected, MSN.ViewModel.Util.CalendarDay> result = new KeyValuePair<CalendarItemSelected, ViewModel.Util.CalendarDay>(itemSelected, item);
+        await ItemSelected.InvokeAsync(result);
+
+    }
+}

@@ -1,0 +1,141 @@
+@namespace MSN.Components
+@using MSN.ViewModel
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+
+
+
+<EditForm Model="@Model">
+
+    @if (IsAuthenticated)
+    {
+
+        <div class="row-75">
+            <div class="col">
+                <div class="row">
+                    <div class="col mt-2 font-weight-bold">New Event: </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group small">
+                            <label for="Name">Name</label>
+                            <InputText @bind-Value="Model.Entry.Name" class="form-control" id="Name" placeholder="">
+                            </InputText>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group small">
+                            <label for="Location">Location</label>
+                            <InputText @bind-Value="Model.Entry.Location" class="form-control" id="Location" placeholder="">
+                            </InputText>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <DateAndTimeComponent @ref="DateStartComponent"></DateAndTimeComponent>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <label for="Name">Description</label>
+                        <InputTextArea rows="2" id="UpdateText" class="w-100" @bind-Value="Model.Entry.Comment">
+                        </InputTextArea>
+                    </div>
+                </div>
+                <div class="row small">
+                    <div class="col">
+                        <p> <button class="btn btn-sm  font-weight-bold  text-primary bg-transparent"
+                            @onclick="PostEntry">Create</button> </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    </EditForm>
+    @code
+    {
+    [Parameter]
+    public string ItemId { get; set; }
+    [Parameter]
+    public EventCallback<bool> EventPostStateChangedCallback { get; set; } = new EventCallback<bool>();
+    DateAndTimeComponent DateStartComponent;
+    public bool IsAuthenticated
+    {
+        get
+        {
+            return AuthenticationStateProvider.GetAuthenticationStateAsync().Result.User.Identity.IsAuthenticated;
+        }
+    }
+    public bool IsLoading { get; set; } = false;
+
+    protected override void OnParametersSet()
+    {
+        Model.DefineNewEntry();
+        if (!string.IsNullOrWhiteSpace(ItemId))
+            Model.SetEntry(Guid.Parse(ItemId));
+    }
+    public EventViewModel Model { get; set; } = new();
+
+    protected void EditSelectedEntry()
+    {
+        Model.EnterEditMode();
+        StateHasChanged();
+    }
+
+    public async Task PostEntry()
+    {
+
+        if (IsLoading)
+        {
+            return;
+        }
+        else
+            try
+            {
+                IsLoading = true;
+                if (Model?.Entry?.Name?.Length > 250)
+                {
+                    await MessageBox($"250 character limit ({Model.Entry.Name.Length} entered)");
+                    return;
+                }
+                if (Model?.Entry?.Name?.Length < 3)
+                {
+                    await MessageBox($"A minimum of 3 characters are required ({Model.Entry.Name} entered)");
+                    return;
+                }
+                if (Model?.Entry?.Comment?.Length > 4000)
+                {
+                    await MessageBox($"4000 character limit ({Model.Entry.Comment.Length} entered)");
+                    return;
+                }
+                Model.Entry.DateStarts = DateStartComponent.GetDateTime();
+                Model.Entry.DateEnds = Model.Entry.DateStarts;
+                Model.PostEntry();
+                StateHasChanged();
+                await EventPostStateChangedCallback.InvokeAsync(true);
+
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+    }
+    protected async void CancelPost()
+    {
+        Model.ClearEntry();
+        StateHasChanged();
+        await EventPostStateChangedCallback.InvokeAsync(true);
+    }
+
+    [Inject]
+    public Microsoft.JSInterop.IJSRuntime jSRuntime { get; set; }
+    protected async Task MessageBox(string Message)
+    {
+        await jSRuntime.InvokeVoidAsync("alert", Message);
+    }
+    protected async ValueTask<bool> ConfirmBox(string Message)
+    {
+        return await jSRuntime.InvokeAsync<bool>("confirm", Message);
+    }
+}

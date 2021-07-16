@@ -1,0 +1,154 @@
+@namespace MSN.Components
+@using MSN.Components.Messaging
+@using MSN.Model
+@using MSN.ViewModel
+
+
+
+<style type="text/css">
+    .card-header-event {
+        padding: 5px 5px;
+        margin-bottom: 0px;
+        background-color: #6c757d;
+        ;
+        border-bottom: 1px solid Black;
+    }
+</style>
+<EditForm Model="@Model">
+    <div class="card card-shadow mb-3 ml-1 mr-1 p-1" style="cursor: pointer; min-height: 150px;" @onclick="ShowModal">
+
+        <div class="card-header card-header-event pl-3 pt-2 text-light">
+            <div class="row">
+                <div class="col text-center">
+                    <span class=" font-weight-bold text-capitalize h6" >
+                    Event
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+
+            <div class="row">
+                <div class="col text-primary h4 pb-2 font-weight-bold">
+                    @(string.IsNullOrWhiteSpace(Model?.Entry?.Name)?"No Title": Model.Entry.Name)
+                </div>
+            </div>
+
+                <div class="row">
+                    <div class="col ">
+                        <div class="h6 font-weight-bold">When:</div>
+                        <div class="row pl-2 ml-2 ">
+                            <div class="col h5">
+                                @Model.Entry.DateStarts.ToShortDateString()
+                            </div>
+                            <div class="col h5">
+                                @Model.Entry.DateStarts.ToShortTimeString()
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            @if (!string.IsNullOrWhiteSpace(Model?.Entry?.Location))
+            {
+                <div class="row">
+                    <div class="col ">
+                        <div class="h6 font-weight-bold">Location:</div>
+                        <div class="row pl-2 ml-2 ">
+                            <div class="col h5">
+                                @Model.Entry.Location
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Model?.Entry?.Comment))
+            {
+                <div class="row">
+                    <div class="col ">
+
+                        <div class="h6 font-weight-bold">Details:</div>
+                        <div class=" pl-2 ml-2">
+                            @if (SummaryViewMode)
+                            {
+                                <span class="  " style="font-size: @(Model?.Entry?.Comment?.Length <= 150 ? "1.25rem":".75rem" );">
+                                    @(new MarkupString(NoteText))
+                                </span>
+                            }
+                            else
+                            {
+                                <span class=" " style="font-size: @(Model?.Entry?.Comment?.Length <= 150 ? "1.25rem":".75rem" );">
+                                    @(new MarkupString(Model.Entry.Comment))
+                                </span>
+                            }
+
+                        </div>
+                    </div>
+                </div>
+            }
+
+
+        </div>
+        <div class="row">
+            <div class="col text-right small text-info font-weight-bold">Created  @Model.Entry.DateCreated.ToShortDateString()
+                @@ @Model.Entry.DateCreated.ToShortTimeString() </div>
+        </div>
+    </div>
+    <EventMessageBoxComponent @ref="EventMessageBoxComponent" ItemId="@Model.Entry.Id.ToString()"
+        Text="@Model.Entry.Comment" DateCreated="@Model.Entry.DateCreated" ModalStateChangedCallback="GetResponse">
+    </EventMessageBoxComponent>
+</EditForm>
+
+
+@code
+{
+    [Parameter]
+    public string ItemId { get; set; }
+    [Parameter]
+    public EventCallback<Guid> EventStateChangedCallback { get; set; } = new EventCallback<Guid>();
+    [Parameter]
+    public bool SummaryViewMode { get; set; } = false;
+    [Inject]
+    protected NavigationManager NavigationManager { get; set; }
+    public EventViewModel Model { get; set; } = new EventViewModel();
+    protected int SummaryTextLength { get; set; } = 500;
+
+    public EventMessageBoxComponent EventMessageBoxComponent { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(ItemId))
+            Model.SetEntry(Guid.Parse(ItemId));
+    }
+
+
+    protected void GetResponse(EventItem newEntry)
+    {
+        Model.Entry = newEntry;
+        if (!Model.Entry.Visible)
+        {
+            NavigationManager.NavigateTo(NavigationManager.Uri, true);
+        }
+        StateHasChanged();
+    }
+    protected void ShowModal()
+    {
+        EventMessageBoxComponent.ShowModal = true;
+    }
+
+    public string NoteText
+    {
+        get
+        {
+            string result = string.Empty;
+            if (Model.Entry != null)
+                result =
+                System.Text.Encodings.Web.HtmlEncoder.Default.Encode(Model.Entry.Comment.Substring(0,
+                Math.Min(Model.Entry.Comment.Length, SummaryViewMode ? SummaryTextLength : Model.Entry.Comment.Length)))
+                .Replace("&#xA;", "<br/>") +
+                (Model.Entry.Comment.Length > SummaryTextLength ? "..." : string.Empty);
+            return result;
+        }
+
+    }
+}

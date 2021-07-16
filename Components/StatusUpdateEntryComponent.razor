@@ -1,0 +1,85 @@
+
+@namespace MSN.Components
+@using MSN.Components.Messaging
+@using MSN.Model
+@using MSN.ViewModel
+
+
+<EditForm Model="@Model">
+    <div class="card card-shadow mb-3 ml-1 mr-1 p-1" style="cursor: pointer; min-height: 150px; ;" @onclick="ShowModal">
+        <div class="card-body">
+            <div class="row">
+                <div class="col " style="overflow-x: hidden; overflow-y:auto; min-height: 150px; max-height:350px;">
+                    @if (SummaryViewMode)
+                    {
+                        <p class=" align-middle text-center" style="text-overflow:ellipsis;  font-size: @(Model?.Entry?.Text?.Length <= 150 ? "2.25rem":"1.25rem" );">
+                            @(new MarkupString(NoteText))
+                        </p>
+                    }
+                    else
+                    {
+                <p class=" align-middle text-center" style="font-size: @(Model?.Entry?.Text?.Length <= 150 ? "2.25rem":"1.25rem" );">
+                    @(new MarkupString(Model.Entry.Text))
+                </p>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="row"> <div class="col text-right small text-info font-weight-bold"> @Model.Entry.DateCreated.ToShortDateString() @@ @Model.Entry.DateCreated.ToShortTimeString() </div> </div>
+    </div>
+    <StatusUpdateMessageBoxComponent @ref="StatusUpdateMessageBoxComponent" ItemId="@Model.Entry.Id.ToString()" Text="@Model.Entry.Text" DateCreated="@Model.Entry.DateCreated" ModalStateChangedCallback="GetResponse"></StatusUpdateMessageBoxComponent>
+</EditForm>
+
+
+@code
+{
+    [Parameter]
+    public string ItemId { get; set; }
+    [Parameter]
+    public EventCallback<Guid> StatusStateChangedCallback { get; set; } = new EventCallback<Guid>();
+    [Parameter]
+    public bool SummaryViewMode { get; set; } = false;
+    [Inject]
+    protected NavigationManager NavigationManager { get; set; }
+    protected int SummaryTextLength { get; set; } = 400;
+
+    public StatusUpdateMessageBoxComponent StatusUpdateMessageBoxComponent { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(ItemId))
+            Model.SetEntry(Guid.Parse(ItemId));
+    }
+    public StatusUpdateEntryViewModel Model { get; set; } = new StatusUpdateEntryViewModel();
+
+
+    protected void GetResponse(StatusUpdateEntry newEntry)
+    {
+        Model.Entry = newEntry;
+        if (!Model.Entry.Visible)
+        {
+            NavigationManager.NavigateTo("/", true);
+        }
+        StateHasChanged();
+    }
+    protected void ShowModal()
+    {
+        StatusUpdateMessageBoxComponent.ShowModal = true;
+    }
+
+
+    public string NoteText
+    {
+        get
+        {
+            string result= string.Empty;
+            if (Model.Entry != null)
+                result =
+        System.Text.Encodings.Web.HtmlEncoder.Default.Encode(Model.Entry.Text.Substring(0, Math.Min(Model.Entry.Text.Length, SummaryViewMode ? SummaryTextLength : Model.Entry.Text.Length)))
+        .Replace("&#xA;", "<br/>") +
+        (Model.Entry.Text.Length > SummaryTextLength ? "..." : string.Empty);
+            return result;
+        }
+
+    }
+}

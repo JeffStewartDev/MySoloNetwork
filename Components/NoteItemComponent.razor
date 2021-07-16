@@ -1,0 +1,114 @@
+
+@namespace MSN.Components
+@using MSN.ViewModel
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<style type="text/css">
+    .card-header-note {
+        padding: 5px 5px;
+        margin-bottom: 0px;
+        background-color: rgb(78,82,231);
+        border-bottom: 1px solid Black;
+    }
+</style>
+<EditForm Model="@Model">
+    @if (Model.CurrentNote != null && Model.CurrentNote.Visible)
+    {
+    <div class="card card-shadow ml-1 mr-1 mb-3" style="cursor: pointer; min-height: 150px;" @onclick="OpenNote">
+
+        <div class="card-header card-header-note pl-3 pt-2 text-light">
+            <div class="row">
+                <div class="col text-center"><span class=" font-weight-bold text-capitalize" style="font-size:1.5rem;"> @(string.IsNullOrWhiteSpace(Model.CurrentNote.Title)?"No Title": Model.CurrentNote.Title)</span></div>
+            </div>
+        </div>
+        <div class="card-body" style="overflow-y:auto;">
+            @if (SummaryViewMode)
+            {
+                <div class="row" style="cursor:pointer;"><div class="col "> <p style="font-size:1.25rem;"> @(new MarkupString(NoteText))</p> </div>  </div>
+            }
+            else
+            {
+                <div class="row"><div class="col"> <p style="font-size:1.25rem;"> @(new MarkupString(Model.CurrentNote.NoteText))</p> </div>  </div>
+            }
+        </div>
+        @if (!SummaryViewMode)
+        {
+            <div class="card-footer">
+                <div class="row"> <div class="col"> @Model.CurrentNote.DateCreated.ToShortDateString() </div> <div class="col "> @Model.CurrentNote.DateCreated.ToShortTimeString() </div> </div>
+                <div class="row">
+                    <div class="col">
+                        <p>
+                            <button class="btn btn-sm  font-weight-bold  text-primary bg-transparent" @onclick='() => RedirectTo(string.Format("/Note/{0}", Model.CurrentNote.Id.ToString()))'>@(IsAuthenticated ? "View / Edit" : "View")</button>
+                        </p>
+                    </div>
+                    @if (IsAuthenticated)
+                    {
+                        <div class="col"> <p> <button class="btn btn-sm  font-weight-bold  text-danger bg-transparent" @onclick="() => DeleteSelectedEntry()">Delete</button> </p> </div>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+    <div class="card-footer" style="background-color: white; border-top: 1px solid white;" >
+        <div class="row">
+            <div class="text-right col"><span class="font-weight-bold small">  @(new MarkupString($"{Model.CurrentNote.DateCreated.ToShortDateString()} @ {Model.CurrentNote.DateCreated.ToShortTimeString()}".Replace(" ","&nbsp;" )))</span></div>
+        </div>
+    </div>
+                    }
+                </div>
+                <br />
+                }
+</EditForm>
+@code
+{
+    [Parameter]
+    public bool SummaryViewMode { get; set; } = false;
+    [Parameter]
+    public string ItemId { get; set; }
+    [Parameter]
+    public EventCallback<bool> NoteStateChangedCallback { get; set; }
+    public bool IsAuthenticated { get { return AuthenticationStateProvider.GetAuthenticationStateAsync().Result.User.Identity.IsAuthenticated; } }
+
+    public string NoteText
+    {
+        get
+        {
+            if (Model.CurrentNote != null)
+                return
+        System.Text.Encodings.Web.HtmlEncoder.Default.Encode(Model.CurrentNote.Text.Substring(0, Math.Min(Model.CurrentNote.Text.Length, SummaryViewMode ? 150 : 250)))
+        .Replace("&#xA;", "<br/>") +
+        (Model.CurrentNote.Text.Length > 250 ? "..." : string.Empty);
+            else
+                return string.Empty;
+        }
+
+    }
+
+    [Inject]
+    protected NavigationManager NavigationManager { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(ItemId))
+            Model.SetNote(Guid.Parse(ItemId));
+    }
+    public NoteViewerViewModel Model { get; set; } = new NoteViewerViewModel();
+
+    protected void OpenNote()
+    {
+        RedirectTo(string.Format("/Note/{0}", Model.CurrentNote.Id.ToString()));
+    }
+
+    protected void RedirectTo(string redirectPath)
+    {
+        NavigationManager.NavigateTo(redirectPath, true);
+    }
+
+    protected void DeleteSelectedEntry()
+    {
+        Model.DeleteCurrentNote();
+        StateHasChanged();
+    }
+
+}

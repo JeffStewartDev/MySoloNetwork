@@ -1,0 +1,78 @@
+@page "/login/{loginid:guid}"
+
+@using MSN.ViewModel
+@using MSN.Model
+@using Microsoft.AspNetCore.Identity
+@using MSN.ModelContext
+
+@ErrorMsg
+
+@code
+{
+    [Parameter]
+    public Guid loginid { get; set; }
+    public string ErrorMsg { get; set; }
+
+    [Inject]
+    protected NavigationManager NavigationManager { get; set; }
+    [Inject]
+    public AuthenticationStateProvider AuthenticationStateProvider { get; set; }
+
+    [Inject]
+    protected SignInManager<IdentityUser>
+    signInManager
+    { get; set; }
+
+    protected async Task LoginUser()
+    {
+
+        using (MSNContext context = new MSNContext())
+        {
+
+
+            foreach (LoginAttempt attempt in context.LoginAttempt.Where(x => x.Id == loginid && !x.IsProcessed))
+                try
+                {
+                    var result = await signInManager.PasswordSignInAsync(attempt.UserName, attempt.Password, false, false);
+
+                    if (result.Succeeded)
+                    {
+                        NavigationManager.NavigateTo(NavigationManager.ToBaseRelativePath(attempt.ReturnUri), true);
+                    }
+                    if (result.IsLockedOut)
+                    {
+                        throw new Exception("User account locked out.");
+                    }
+                    else
+                        throw new Exception("Invalid login attempt.");
+
+                }
+                catch (Exception ex)
+                {
+                    ErrorMsg = (ex.Message);
+                }
+
+
+        }
+
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoginUser();
+    }
+
+    [Inject]
+    public Microsoft.JSInterop.IJSRuntime jSRuntime { get; set; }
+    protected async Task MessageBox(string Message)
+    {
+        await jSRuntime.InvokeVoidAsync("alert", Message);
+    }
+    protected async ValueTask<bool>
+        ConfirmBox(string Message)
+    {
+        return await jSRuntime.InvokeAsync<bool>
+            ("confirm", Message);
+    }
+}
+

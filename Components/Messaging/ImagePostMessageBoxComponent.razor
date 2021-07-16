@@ -1,0 +1,267 @@
+
+@namespace MSN.Components.Messaging
+@using MSN.ViewModel
+@using MSN.Model
+@using MSN.BlazorServer.Util
+@using MSN.ModelContext
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+
+<div hidden="@(!ShowModal)">
+    <EditForm Model="@Model">
+        @if (isEditMode)
+        {
+
+<div class="modal-backdrop show"></div> <!-- Modal -->
+                    <div class="modal fade show" style="padding-right: 17px; display: block;" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-scrollable" role="document" style="max-width:800px;">
+                            <div class="modal-dialog" style="max-width:800px;">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <div class="modal-title" id="myModalLabel">
+                                            <div class="row"> <div class="col"><span class="font-weight-bold small text-info">  @(new MarkupString($"{Model.Entry.DateCreated.ToShortDateString()} @ {Model.Entry.DateCreated.ToShortTimeString()}".Replace(" ","&nbsp;" )))</span> </div> </div>
+                                        </div>
+                                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true" @onclick="SetFModalResponse">&times;</button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col"><img class="card-img card-shadow" src="@GetImageLink(Model.Entry.ImageFileLocation)"> </div>
+                                                <div class="col-6">
+                                                    <div class="row">
+                                                        <div class="col">
+                                                            Comment:
+                                                        </div>
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col">
+                                                            <InputTextArea @bind-Value="Model.Entry.Comment"></InputTextArea>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <div class="row m-0 p-0 small">
+                                           @if (IsAuthenticated)
+                                           { 
+                                               <div class="col-sm">  <button class="btn btn-primary" @onclick="SavePostEntryEdit">Save</button> </div>
+                                               }
+                                            <div class="col-sm "><button type="button" class="btn btn-sm  font-weight-bold  text-primary bg-transparent" data-dismiss="modal" @onclick="CancelPostEntryEdit">Cancel</button> </div>
+                                        </div>
+                                    </div>
+                                </div><!-- /.modal-content -->
+                            </div><!-- /.modal -->
+                        </div>
+                    </div> }
+                else
+                {
+<div class="modal-backdrop show"></div> <!-- Modal -->
+                    <div class="modal fade show" style="padding-right: 17px; display: block;" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-scrollable" role="document" style="max-width:800px;">
+                            <div class="modal-dialog" style="max-width:800px;">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <div class="modal-title" id="myModalLabel">
+                                            <div class="row"> <div class="col"> <span class="font-weight-bold small text-info">  @(new MarkupString($"{Model.Entry.DateCreated.ToShortDateString()} @ {Model.Entry.DateCreated.ToShortTimeString()}".Replace(" ","&nbsp;" )))</span> </div> </div>
+                                        </div>
+                                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true" @onclick="SetFModalResponse">&times;</button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col" @onclick="GoToImage" >  
+                                                    <img style="cursor:pointer;" class="card-img card-shadow" src="@GetImageLink(Model.Entry.ImageFileLocation)">
+                                                </div>
+                                                @if (!string.IsNullOrWhiteSpace(Model.Entry?.Comment))
+                                                {
+                            <div class="col-6">
+                                @*<div class="row">
+                                        <div class="col">
+                                            Comment:
+                                        </div>
+                                    </div>*@
+                                <div class="row">
+                                    <div class="col">
+                                        @Model.Entry.Comment
+                                    </div>
+                                </div>
+                            </div>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @if (isConfirmDeleteMode && IsAuthenticated)
+                                    {
+                <div class="modal-footer">
+                    <div class="row m-0 p-0 small alert alert-info">
+                        <div class="col-sm"> Delete Image? </div>
+                        <div class="col-sm "> <button class="btn btn-sm  font-weight-bold  text-danger bg-transparent" @onclick="() => DeleteSelectedEntry()">Yes</button>  </div>
+                        <div class="col-sm "><button type="button" class="btn btn-sm  font-weight-bold  text-primary bg-transparent" data-dismiss="modal" @onclick="() => isConfirmDeleteMode = false">Cancel</button> </div>
+                    </div>
+                </div>}
+            else
+            {
+<div class="modal-footer">
+    <div class="row m-0 p-0 small w-100 " >
+
+        @if (IsAuthenticated)
+        {
+    <div class="col  ">
+        <button class="btn btn-sm  font-weight-bold  text-primary bg-transparent" @onclick="() => EditSelectedEntry()">Edit</button>
+    </div>
+                                @if (Model.Entry.AlbumId != null && !IsMainImage)
+                                {
+                                    <div class="col text-info ">
+                                        <button class="btn btn-sm  font-weight-bold   bg-transparent" @onclick="MakeMainImage">Make Main Album Image</button>
+                                    </div>
+                                }
+                                <div class="col  ">
+                                    <button class="btn btn-sm text-secondary bg-transparent ml-1 mr-1" @onclick="()=>AdjustImage(Model.Entry.ImageFileLocation, RotateImage:false,  FlipImage:true)">Flip</button>
+                                </div>
+                                <div class="col  "> 
+                                    <button class="btn btn-sm text-secondary bg-transparent" @onclick="()=>AdjustImage(Model.Entry.ImageFileLocation, RotateImage:true,  FlipImage:false)">Rotate</button>
+                                </div>
+                                                            <div class="col  ">
+                                                                <button class="btn btn-sm  font-weight-bold  text-danger bg-transparent" @onclick="() => isConfirmDeleteMode = true">Delete</button>
+                                                            </div>
+                                                            }
+        <div class="col-sm  text-center"><button type="button" class="btn btn-primary" data-dismiss="modal" @onclick="SetTModalResponse">Close</button> </div>
+    </div>
+</div>}
+                                </div><!-- /.modal-content -->
+                            </div><!-- /.modal -->
+                        </div>
+                    </div>}
+    </EditForm>
+</div>
+@code
+{ 
+    [Inject]
+    protected NavigationManager NavigationManager { get; set; }
+    [Inject]
+    public MSN.Model.Util.ServerFileInfo ServerFileInfo { get; set; }
+    [Inject]
+    private MSNContext Context { get; set; }
+    [Parameter]
+    public DateTime DateCreated { get; set; }
+    [Parameter]
+    public string Text { get; set; }
+    [Parameter]
+    public string FileSource { get; set; }
+    [Parameter]
+    public EventCallback<MessageBoxResult> ModalStateChangedCallback { get; set; } = new EventCallback<MessageBoxResult>();
+    public bool ShowModal { get; set; }
+    [Parameter]
+    public string ItemId { get; set; }
+    [Parameter]
+    public ImagePost ImageEntry { get; set; }
+    public bool isEditMode { get; set; } = false;
+    public bool isConfirmDeleteMode { get; set; } = false;
+    public bool IsAuthenticated { get { return AuthenticationStateProvider.GetAuthenticationStateAsync().Result.User.Identity.IsAuthenticated; } }
+    public int TimestampString { get; set; }=DateTime.Now.Millisecond;
+
+    public bool IsMainImage { get; set; } = false;
+
+
+    public ImagePostViewModel Model { get; set; } = new ImagePostViewModel();
+    public MessageBoxResult ImageResult { get; set; } = MessageBoxResult.Viewed;
+
+    protected async void SetTModalResponse()
+    {
+        await ModalStateChangedCallback.InvokeAsync(ImageResult);
+        ShowModal = false;
+        isEditMode = false;
+        isConfirmDeleteMode = false;
+
+    }
+    protected async void SetFModalResponse()
+    {
+        await ModalStateChangedCallback.InvokeAsync(ImageResult);
+        ShowModal = false;
+        isEditMode = false;
+        isConfirmDeleteMode = false;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(ItemId))
+            Model.SetEntry(Guid.Parse(ItemId));
+        else if (ImageEntry != null)
+            Model.SetEntry(ImageEntry.Id);
+        //CheckMainImage();
+    }
+
+    public void CheckMainImage()
+    {        
+        Guid imageId = Model.Entry.Id;
+        Guid? albumId = Model.Entry.AlbumId;
+        if (albumId.HasValue)
+        {
+                var album = Context.Albums.Where(x => x.Id == albumId).FirstOrDefault();
+                int count = Context.Albums.Where(x => x.Id == albumId).Count();
+                if (album != null)
+                {
+                    try
+                    {
+                        Guid mainImageId =album.MainImageId;
+                        if (mainImageId == imageId)
+                            IsMainImage=true;
+                    }
+                    catch (System.Exception)
+                    {
+                        throw;
+                    }
+                    StateHasChanged();
+                }
+        }
+    }
+
+    protected void MakeMainImage()
+    {
+        Model.MakeMainImage();
+        IsMainImage = true;
+        ImageResult = MessageBoxResult.Made_Primary;
+        SetTModalResponse();
+        StateHasChanged();
+    }
+    protected void EditSelectedEntry()
+    {
+        isEditMode = true;
+    }
+    protected void SavePostEntryEdit()
+    {
+        Model.SaveUpdatedEntry();
+        isEditMode = false;
+        isConfirmDeleteMode = false;
+        ImageResult = MessageBoxResult.Edited;
+    }
+    protected void CancelPostEntryEdit()
+    {
+        if (!string.IsNullOrWhiteSpace(ItemId))
+            Model.SetEntry(Guid.Parse(ItemId));
+        else if (ImageEntry != null)
+            Model.SetEntry(ImageEntry.Id);
+        isEditMode = false;
+        isConfirmDeleteMode = false;
+    }
+    protected async void DeleteSelectedEntry()
+    {
+        ImageResult = MessageBoxResult.Deleted;
+        Model.DeleteEntry();
+        await ModalStateChangedCallback.InvokeAsync(ImageResult);
+    }
+    protected void GoToImage()
+    {
+        Guid id = Model.Entry.Id;
+        NavigationManager.NavigateTo($"/image/{id}", true);
+
+    }    
+    protected async Task AdjustImage(string ImageAbsoluteFilePath,bool RotateImage = false, bool FlipImage = false){
+        bool result = MSN.Util.ImageUtlil.AdjustImage(ServerFileInfo.WWWRootFolder,  ImageAbsoluteFilePath,  RotateImage, FlipImage);
+        //NavigationManager.NavigateTo(NavigationManager.Uri,true);
+        TimestampString = DateTime.Now.Millisecond;
+        await ModalStateChangedCallback.InvokeAsync(MessageBoxResult.Adjusted);
+    }
+    protected string GetImageLink(string ImageFileLocation) => $"{ImageFileLocation}?timestamp={TimestampString}";
+}

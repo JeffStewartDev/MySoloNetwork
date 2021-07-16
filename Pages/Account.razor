@@ -1,0 +1,456 @@
+@page "/account"
+@using MSN.Components
+@using MSN.ViewModel
+@using System.IO
+@using MSN.Model.Util
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<EditForm Model="@Model">
+    @if (Model != null)
+    {
+
+        @if (isLoading)
+        {
+                        <div class="modal-backdrop show"></div> <!-- Modal -->
+                        <div class="modal fade show " style="padding-right: 17px; display: block;" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="false">
+                            <div class="modal-dialog"style="max-width:300px;">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <div class="modal-title" id="myModalLabel">
+                                            <div class="row"> <div class="col">Loading Image</div> </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="card-body">
+                                            <span>One Moment...</span>
+                                        </div>
+                                    </div>
+                                </div><!-- /.modal-content -->
+                            </div>
+                            <!-- /.modal -->
+                        </div>
+
+                        
+        }
+        <div class="h1 ">Account Settings</div>
+
+        <div class="table p-2">
+            <div class="row">
+                <div class="col mb-3">
+                    <div class="card  mb-3" style="min-height:100%;">
+                        <div class="card-header font-weight-bold">
+                            Full Name
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col">
+                                    <InputText maxlength="30" @bind-Value="Model.Full_Name"></InputText>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col">
+                                    <button class="btn btn-primary mt-3 mb-2" @onclick="SaveAccountSettings">Save</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card   mb-3">
+                        <div class="card-header font-weight-bold">
+                            Home Page Large Picture
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col text-center">
+                                    @if (Change_Home_Page_Jumbotron_Picture)
+                                    {
+                                        <div class="mb-2 mt-2">
+                                            <InputFile OnChange="HandleHomePageJumbotronPicture" />
+                                        </div>
+                                        <div>
+
+                                    @if (!string.IsNullOrWhiteSpace(Model.Home_Page_Jumbotron_Picture?.TempFilePath))
+                                            {
+                                                <button class="btn btn-primary" @onclick="SaveJumbotronImage">Save</button>
+                                            }
+                                            <button class="btn btn-secondary"
+                                        @onclick="InverseJumbotronControls">Cancel</button>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div>
+                                            @if (!string.IsNullOrWhiteSpace(Model.Home_Page_Jumbotron_Picture?.AbsoluteFilePath))
+                                            {
+                                                    <object class="card-img" style="width: 200px; min-width:200px;"  data="@GetImageLink(Model.Home_Page_Jumbotron_Picture?.AbsoluteFilePath)" type="image/png" alt="">
+                                                        <img class="card-img" style="width: 200px; min-width:200px;"  src="/Default/large.jpg" alt="">
+                                                    </object>  
+                                            }
+                                            else
+                                            {
+                                                <span>EMPTY</span>
+                                            }
+                                        </div>
+                                        <div>
+                                            <button class="btn btn-primary" @onclick="InverseJumbotronControls">Change</button>
+                                            @if (!string.IsNullOrWhiteSpace(Model.Home_Page_Jumbotron_Picture?.AbsoluteFilePath))
+                                            {
+                                            <button class="btn btn-secondary ml-1 mr-1" @onclick="()=>AdjustImage(Model.Home_Page_Jumbotron_Picture?.AbsoluteFilePath, RotateImage:false,  FlipImage:true)">Flip</button>
+                                            <button class="btn btn-secondary" @onclick="()=>AdjustImage(Model.Home_Page_Jumbotron_Picture?.AbsoluteFilePath, RotateImage:true,  FlipImage:false)">Rotate</button>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card  mb-3 ">
+                        <div class="card-header font-weight-bold">
+                            Home Page Profile Picture
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col text-center">
+                                    @if (Change_Home_Page_Profile_Picture)
+                                    {
+                                        <div class="mb-2 mt-2">
+                                            <InputFile OnChange="HandleHomePageProfilePicture" />
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(Model.Home_Page_Profile_Picture?.TempFilePath))
+                                        {
+                                            <button class="btn btn-primary" @onclick="SaveProfileImage">Save</button>
+                                        }
+                                        <button class="btn btn-secondary"
+                                    @onclick="InverseProfile_PictureControls">Cancel</button>
+                                    }
+                                    else
+                                    {
+                                        <div>
+                                            @if (!string.IsNullOrWhiteSpace(Model.Home_Page_Profile_Picture?.AbsoluteFilePath))
+                                            {
+                                                <object class="img-thumbnail mb-3" style="width: 200px; min-width:200px; " data="@GetImageLink(Model.Home_Page_Profile_Picture?.AbsoluteFilePath)" type="image/png" alt="">
+                                                    <img class="img-thumbnail mb-3" style="width: 200px; min-width:200px;" src="/Default/profile.jpg" alt="">
+                                                </object>
+                                            }
+                                            else
+                                            {
+                                                <span>EMPTY</span>
+                                            }
+                                        </div>
+                                        <div>
+                                            <button class="btn btn-primary"
+                                                @onclick="InverseProfile_PictureControls">Change</button>
+                                            @if (!string.IsNullOrWhiteSpace(Model.Home_Page_Profile_Picture?.AbsoluteFilePath))
+                                            {
+                                            <button class="btn btn-secondary ml-1 mr-1" @onclick="()=>AdjustImage(Model.Home_Page_Profile_Picture?.AbsoluteFilePath, RotateImage:false,  FlipImage:true)">Flip</button>
+                                            <button class="btn btn-secondary" @onclick="()=>AdjustImage(Model.Home_Page_Profile_Picture?.AbsoluteFilePath, RotateImage:true,  FlipImage:false)">Rotate</button>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div>
+            
+                    <div class="card  mb-3" style="min-height:100%;">
+                        <div class="card-header font-weight-bold">
+                            Temp Area
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col">
+                                    <ul>
+                                        <li>Files: @TempFolderFileCount</li>
+                                        <li>Total Size: @(TempFolderSize.ToString("#,###,##0")) bytes</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col">
+                                    <button class="btn btn-primary mt-3 mb-2" disabled="@(Change_Home_Page_Profile_Picture || Change_Home_Page_Jumbotron_Picture)" @onclick="EmptyTempArea">Empty</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+        </div>
+        <div class="table">
+            <div class="row">
+                <div class="col">
+                    <ChangeUsernameComponent></ChangeUsernameComponent>
+                </div>
+                <div class="col">
+                    <ChangePasswordComponent></ChangePasswordComponent>
+                </div>
+                <div class="col">
+                    <ChangeSecurityStatementComponent></ChangeSecurityStatementComponent>
+                </div>
+            </div>
+        </div>
+
+
+
+    }
+</EditForm>
+
+@code {
+
+    public AccountViewModel Model { get; set; }
+    public bool Change_Home_Page_Profile_Picture { get; set; } = false;
+    public bool Change_Home_Page_Jumbotron_Picture { get; set; } = false;
+
+    public string UploadResult { get; set; }
+    private const long maxFileSize = 1024 * 10000;
+    protected int TempFolderFileCount  { get; set; }
+    protected long TempFolderSize  { get; set; }
+    private bool isLoading;
+
+    [Inject]
+    protected NavigationManager NavigationManager { get; set; }
+    [Inject]
+    public MSN.Model.Util.ServerFileInfo ServerFileInfo { get; set; }
+    [Inject]
+    private MSN.BlazorServer.Data.MSNBlazorServerContext SecurityContext { get; set; }
+    [Inject]
+    private MSN.ModelContext.MSNContext DefaultContext { get; set; }
+    protected void LoadTempAreaData(){
+        if (System.IO.Directory.Exists(ServerFileInfo.UnsafeImagesRootFolder))
+        {
+             List<string> files = System.IO.Directory.EnumerateFiles(ServerFileInfo.UnsafeImagesRootFolder).ToList();
+                 TempFolderSize = 0;
+                 TempFolderFileCount=0;
+                 foreach (var item in files)
+                 {
+                     FileInfo file = new FileInfo(item);
+                     TempFolderSize += file.Length;
+                     TempFolderFileCount++;
+                 }
+        }
+    }
+    protected async Task EmptyTempArea(){
+        if (System.IO.Directory.Exists(ServerFileInfo.UnsafeImagesRootFolder))
+        {
+            bool someFailure = false;
+             List<string> files = System.IO.Directory.EnumerateFiles(ServerFileInfo.UnsafeImagesRootFolder).ToList();
+                 foreach (var item in files)
+                 {
+                     try
+                     {
+                    (new FileInfo(item)).Delete();
+                     }
+                     catch (System.Exception)
+                     {
+                         someFailure=true;
+                     }
+                 }
+                 if (someFailure)
+                    await MessageBox("Some files couldn't be removed. You may have to do so manually.");
+                 else
+                    await MessageBox("Temp Area Emptied Successfully.");
+
+        }
+                 else
+                    await MessageBox($"Temp Folder ({ServerFileInfo.UnsafeImagesRootFolder}) not found. ");
+        LoadTempAreaData();
+    }
+    protected override void OnInitialized()
+    {
+        LoadTempAreaData();
+        if (!ServerFileInfo.PerformDatabaseCheck(SecurityContext, DefaultContext) &&
+        !NavigationManager.Uri.EndsWith("/install")
+        )
+            NavigationManager.NavigateTo("/install", true);
+    }
+    protected override void OnParametersSet()
+    {
+        Model = Model ?? (new AccountViewModel(ServerFileInfo));
+        base.OnParametersSet();
+    }
+
+    protected async Task HandleHomePageJumbotronPicture(InputFileChangeEventArgs e)
+    {
+        IBrowserFile files_HomePageJumbotronPicture = e.File;
+        isLoading = true;
+        try
+        {
+            if (files_HomePageJumbotronPicture != null)
+                Model.Home_Page_Jumbotron_Picture = await SaveTempImage(files_HomePageJumbotronPicture);
+            if (string.IsNullOrWhiteSpace(Model.Home_Page_Jumbotron_Picture.AbsoluteFilePath) &&
+            string.IsNullOrWhiteSpace(Model.Home_Page_Jumbotron_Picture.WWWRootFilePath) &&
+            string.IsNullOrWhiteSpace(Model.Home_Page_Jumbotron_Picture.TempFilePath)
+            )
+            {
+                await MessageBox("Image not found.");
+                Model.ResetHome_Page_Jumbotron_Picture();
+                InverseJumbotronControls();
+            }
+            Change_Home_Page_Jumbotron_Picture = true;
+        }
+        catch (Exception ex)
+        {
+            await MessageBox(ex.InnerException == null ? ex.Message : ex.InnerException.Message);
+            Model.ResetHome_Page_Jumbotron_Picture();
+            InverseJumbotronControls();
+        }
+        isLoading = false;
+        LoadTempAreaData();
+        StateHasChanged();
+    }
+    protected async Task HandleHomePageProfilePicture(InputFileChangeEventArgs e)
+    {
+        UploadResult = string.Empty;
+        isLoading = true;
+
+        IBrowserFile files_HomePageProfilePicture = e.File;
+
+        try
+        {
+            if (files_HomePageProfilePicture != null)
+                Model.Home_Page_Profile_Picture = await SaveTempImage(files_HomePageProfilePicture);
+            if (string.IsNullOrWhiteSpace(Model.Home_Page_Profile_Picture.AbsoluteFilePath) &&
+            string.IsNullOrWhiteSpace(Model.Home_Page_Profile_Picture.WWWRootFilePath) &&
+            string.IsNullOrWhiteSpace(Model.Home_Page_Profile_Picture.TempFilePath)
+            )
+            {
+                await MessageBox("Image not found.");
+                Model.ResetHome_Page_Profile_Picture();
+                InverseProfile_PictureControls();
+            }
+        }
+        catch (Exception ex)
+        {
+            await MessageBox(ex.InnerException == null ? ex.Message : ex.InnerException.Message);
+            Model.ResetHome_Page_Profile_Picture();
+            files_HomePageProfilePicture = null;
+            InverseProfile_PictureControls();
+        }
+        Change_Home_Page_Profile_Picture = true;
+        isLoading = false;
+        LoadTempAreaData();
+        StateHasChanged();
+    }
+    protected void InverseJumbotronControls()
+    {
+        Change_Home_Page_Jumbotron_Picture = !Change_Home_Page_Jumbotron_Picture;
+        if (!Change_Home_Page_Jumbotron_Picture)
+        {
+            Model.ResetHome_Page_Jumbotron_Picture();
+        }
+    }
+    protected void InverseProfile_PictureControls()
+    {
+        Change_Home_Page_Profile_Picture = !Change_Home_Page_Profile_Picture;
+        if (!Change_Home_Page_Profile_Picture)
+        {
+            Model.ResetHome_Page_Profile_Picture();
+        }
+    }
+
+
+    protected async Task SaveProfileImage()
+    {
+        try
+        {
+            Model.SetHome_Page_Profile_Picture();
+            await MessageBox("Image Saved Successfully.");
+            Model.ResetHome_Page_Profile_Picture();
+            InverseProfile_PictureControls();
+        }
+        catch (Exception ex)
+        {
+            await MessageBox(ex.InnerException == null ? ex.Message : ex.InnerException.Message);
+        }
+        LoadTempAreaData();
+    }
+    protected async Task SaveJumbotronImage()
+    {
+        try
+        {
+            Model.SetHome_Page_Jumbotron_Picture();
+            await MessageBox("Image Saved Successfully.");
+            Model.ResetHome_Page_Jumbotron_Picture();
+            InverseJumbotronControls();
+
+        }
+        catch (Exception ex)
+        {
+            await MessageBox(ex.InnerException == null ? ex.Message : ex.InnerException.Message);
+        }
+        LoadTempAreaData();
+    }
+    protected async Task SaveAccountSettings()
+    {
+        try
+        {
+            Model.SetFull_Name();
+            await MessageBox("Name Saved Successfully.");
+        }
+        catch (Exception ex)
+        {
+            await MessageBox(ex.InnerException == null ? ex.Message : ex.InnerException.Message);
+        }
+    }
+    protected async Task<UploadedFileItem> SaveTempImage(IBrowserFile entry)
+    {
+        UploadedFileItem item = new(ServerFileInfo);
+            
+            string untrustedTempPath = Path.Combine(ServerFileInfo.UnsafeImagesRootFolder, entry.Name);
+            item.FileName = entry.Name;
+            item.TempFilePath = untrustedTempPath;
+
+            await using FileStream fs = new(
+            item.TempFilePath,
+            FileMode.Create
+            );
+
+            await entry.OpenReadStream(maxFileSize).CopyToAsync(fs);
+
+            
+
+            ImagePostViewModel model = new ImagePostViewModel();
+            string result = await model.SaveImage(item, ServerFileInfo);
+            if (!string.IsNullOrWhiteSpace(result))
+            {
+                throw new Exception($"Error while loading image: ({result})");
+            }
+
+                    await fs.DisposeAsync();
+        @* try
+        {
+        }
+        catch (Exception ex)
+        {
+            await MessageBox(ex.InnerException == null? ex.Message: ex.InnerException.Message);
+            throw;
+        } *@
+        return item;
+    }
+
+
+
+    [Inject]
+    public Microsoft.JSInterop.IJSRuntime jSRuntime { get; set; }
+    protected async Task MessageBox(string Message)
+    {
+        await jSRuntime.InvokeVoidAsync("alert", Message);
+    }
+    protected async ValueTask<bool> ConfirmBox(string Message)
+    {
+        return await jSRuntime.InvokeAsync<bool>("confirm", Message);
+    }
+    protected void AdjustImage(string ImageAbsoluteFilePath,bool RotateImage = false, bool FlipImage = false){
+        bool result = MSN.Util.ImageUtlil.AdjustImage(ServerFileInfo.WWWRootFolder,  ImageAbsoluteFilePath,  RotateImage, FlipImage);
+        TimestampString = DateTime.Now.Millisecond;
+    }
+    public int TimestampString { get; set; }=DateTime.Now.Millisecond;
+    protected string GetImageLink(string ImageFileLocation) => $"{ImageFileLocation}?timestamp={TimestampString}";
+    
+}

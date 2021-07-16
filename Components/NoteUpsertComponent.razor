@@ -1,0 +1,178 @@
+
+@namespace MSN.Components
+@using MSN.ViewModel
+@using MSN.Model
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<style type="text/css">
+    .card-header-note {
+        padding: 5px 5px;
+        margin-bottom: 0px;
+        background-color: rgb(78,82,231);
+        border-bottom: 1px solid Black;
+    }
+</style>
+<EditForm Model="@Model">
+    @if (Model.CurrentNote != null && Model.CurrentNote.Visible)
+    {
+        @if (string.IsNullOrWhiteSpace(ItemId))
+        {
+            <div class="h1">New Note</div>
+        }
+        <div class="row">
+            <div class="col">
+
+
+                <div class="card card-shadow ml-1 mr-1 mb-3" style="">
+                    <div class="card-header-note pl-3 pt-2">
+
+                        @if (IsEditMode && IsAuthenticated)
+                        {
+                            <InputText class="w-100 font-weight-bold" @bind-Value="Model.CurrentNote.Title" placeholder="Title" />
+                        }
+                        else
+                        {
+                            <div class="row">
+                                <div class="col"><span class=" font-weight-bold text-light text-capitalize"> @(string.IsNullOrWhiteSpace(Model.CurrentNote.Title)?"No Title": Model.CurrentNote.Title)</span></div>
+                                <div class="text-right col"><span class="font-weight-bold small text-light text-capitalize">   @(new MarkupString($"{Model.CurrentNote.DateCreated.ToShortDateString()} @ {Model.CurrentNote.DateCreated.ToShortTimeString()}".Replace(" ","&nbsp;" )))</span></div>
+                            </div>
+
+                        }
+                    </div>
+                    <div class="card-body" style="overflow-y:auto;">
+                        <div class="row">
+                            <div class="col">
+
+                                @if (IsEditMode && IsAuthenticated)
+                                {
+                                    <InputTextArea class="w-100" rows="15" @bind-Value="Model.CurrentNote.Text" placeholder="Note"></InputTextArea>
+                                }
+                                else
+                                {
+                                    <span class="w-100"> @(new MarkupString(Model.CurrentNote.NoteText))</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (IsAuthenticated)
+                    {
+                        <div class="card-footer">
+                            <div class="row">
+                                <div class="col">
+                                    <p>
+                                        @if (IsEditMode && IsAuthenticated)
+                                        {
+                                            <button class="btn   font-weight-bold  text-primary bg-transparent" @onclick="SaveNote">Save</button>
+                                        }
+                                        else if (IsAuthenticated)
+                                        {
+                                            <button class="btn   font-weight-bold  text-primary bg-transparent" @onclick="() => EditNote()">Edit</button>
+                                        }
+                                    </p>
+                                </div>
+                                @if (IsEditMode && IsAuthenticated)
+                                {
+                                    <div class="col">
+                                        <p> <button class="btn   font-weight-bold  text-danger bg-transparent" @onclick="CancelEdit">Cancel</button> </p>
+                                    </div>
+                                }
+
+                                @if (isConfirmDeleteMode && IsAuthenticated)
+                                {
+                                    <div class="col">
+                                        <div class="row m-0 p-0 small alert alert-info">
+                                            <div class="col-sm"> Delete Note? </div>
+                                            <div class="col-sm text-right"> <button class="btn   font-weight-bold  text-danger bg-transparent" @onclick="() => DeleteSelectedEntry()">Yes</button>  </div>
+                                            <div class="col-sm text-right"><button type="button" class="btn   font-weight-bold  text-primary bg-transparent" data-dismiss="modal" @onclick="() => isConfirmDeleteMode = false">Cancel</button> </div>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                      if (!string.IsNullOrWhiteSpace(ItemId) && IsAuthenticated)
+                                {
+                                    <div class="col">
+                                        <p> <button class="btn   font-weight-bold  text-danger bg-transparent" @onclick="() => isConfirmDeleteMode = true">Delete</button> </p>
+                                    </div>
+                                }
+
+                            </div>
+                        </div>
+                    }
+                    </div>
+
+
+            </div>
+        </div>
+    }
+
+</EditForm>
+
+@code {
+    [Parameter]
+    public string ItemId { get; set; }
+
+    public NoteViewerViewModel Model { get; set; } = new NoteViewerViewModel();
+    [Parameter]
+    public EventCallback<bool> NoteStateChangedCallback { get; set; } = new EventCallback<bool>();
+    public bool IsEditMode { get; set; } = false;
+    public bool IsAuthenticated { get { return AuthenticationStateProvider.GetAuthenticationStateAsync().Result.User.Identity.IsAuthenticated; } }
+    public bool isConfirmDeleteMode { get; set; } = false;
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(ItemId))
+            Model.SetNote(Guid.Parse(ItemId));
+        else
+            Model.NewNote();
+    }
+
+    protected async void CancelEdit()
+    {
+        IsEditMode = false;
+        isConfirmDeleteMode = false;
+        if (string.IsNullOrWhiteSpace(ItemId))
+        {
+            await NoteStateChangedCallback.InvokeAsync(true);
+        }
+    }
+    protected async void DeleteSelectedEntry()
+    {
+        Model.DeleteCurrentNote();
+        StateHasChanged();
+        await NoteStateChangedCallback.InvokeAsync(true);
+    }
+    protected async Task SaveNote()
+    {
+        if (string.IsNullOrWhiteSpace(Model.CurrentNote.Title))
+        {
+            await MessageBox("Note Title is required.");
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(Model.CurrentNote.Text))
+        {
+            await MessageBox("Note Text is required.");
+            return;
+        }
+        Model.SaveCurrentNote();
+        StateHasChanged();
+        await NoteStateChangedCallback.InvokeAsync(true);
+    }
+    protected void EditNote()
+    {
+        IsEditMode = true;
+    }
+    [Inject]
+    public Microsoft.JSInterop.IJSRuntime jSRuntime { get; set; }
+    protected async Task MessageBox(string Message)
+    {
+        await jSRuntime.InvokeVoidAsync("alert", Message);
+    }
+    protected async ValueTask<bool> ConfirmBox(string Message)
+    {
+        return await jSRuntime.InvokeAsync<bool>("confirm", Message);
+    }
+
+
+        //await NoteStateChangedCallback.InvokeAsync(true);
+}

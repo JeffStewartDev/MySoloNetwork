@@ -1,0 +1,60 @@
+@namespace MSN.Components.Messaging
+@using MSN.ViewModel
+@using MSN.Model
+
+
+<div hidden="@(!ShowModal)">
+    <div class="modal-backdrop show"></div>
+    <!-- Modal -->
+    <div class="modal fade show" style="padding-right: 17px; display: block;" id="myModal" tabindex="-1" role="dialog"
+        aria-labelledby="myModalLabel" aria-hidden="true">
+
+        <div class="modal-dialog" style="max-width:800px;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title" id="myModalLabel">
+                        @Title
+                    </h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true"
+                        @onclick="SetFModalResponse">&times;</button>
+                </div>
+                <div class="modal-body">
+                    @Text
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal"
+                        @onclick="SetFModalResponse">Cancel</button>
+                    <button type="button" class="btn btn-primary" data-dismiss="modal"
+                        @onclick="SetTModalResponse">OK</button>
+                </div>
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal -->
+    </div>
+</div>
+
+@code
+{
+    [Parameter]
+    public string Title { get; set; }
+    [Parameter]
+    public string Text { get; set; }
+    [Parameter]
+    public EventCallback<bool> ModalStateChangedCallback { get; set; } = new EventCallback<bool>();
+    public bool ShowModal { get; set; }
+    [Inject]
+    public MSN.ModelContext.MSNContext context { get; set; }
+
+    protected async void SetTModalResponse()
+    {
+        await ModalStateChangedCallback.InvokeAsync(true);
+        ShowModal = false;
+    }
+    protected async void SetFModalResponse()
+    {
+        await ModalStateChangedCallback.InvokeAsync(false);
+        ShowModal = false;
+    }
+
+
+
+}

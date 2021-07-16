@@ -1,0 +1,158 @@
+
+@namespace MSN.Components
+@using MSN.ViewModel
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using System.IO
+
+<div class="pb-2 mb-2">
+<div  class="@(IsLoading?"disabled":"") mt-2" style="@(IsLoading?"opacity: 0.3; cursor:wait;":"")" >
+
+    <EditForm Model="@Model">
+        <div class="row-75">
+            <div class="col">
+                <div class="row">
+                    <div class="col font-weight-bold mb-2">
+                        Post Image <span class="small">(10Mb or less)</span>:
+                    </div>
+                </div>
+                @if (IsAuthenticated)
+                {
+<div class="mb-2" style="visibility: @FileControlVisibility">
+    <InputFile @ref="InputFile1" OnChange="HandleFileSelected"   />
+</div> 
+if (Model?.ImageFiles != null && Model?.ImageFiles.Count !=0)
+{
+    <div class="h4 text-primary">@Model?.ImageFiles.Count File Ready for Upload </div>
+}
+                    @if (HasFailedUpload)
+                    {
+<div class="h4 text-danger">Image failed to upload. Make sure the file is an image, and try again.</div>}
+
+                                        @if (Model.ImageFiles?.Count > 0)
+                                        {
+                    <div class="row">
+                        <div class="col">
+                            <div class="row">
+                                <div class="col ">Comment:</div>
+                            </div>
+                            <div class="row">
+                                <div class="col"><InputTextArea  disabled="@IsLoading" rows="3" class="w-100" @bind-Value="Model.Entry.Comment"></InputTextArea> </div>
+                            </div>
+                        </div>
+                    </div>
+                                            <div class="row">
+                                                <div class="col">  <button  disabled="@IsLoading"  class="@(IsLoading?"disabled":"") btn btn-sm  font-weight-bold  text-primary" @onclick="PostImage">Save</button>   </div>
+                                                <div class="col">  <button disabled="@IsLoading"  class="@(IsLoading?"disabled":"") btn btn-sm  font-weight-bold  text-danger " @onclick="CancelImage">Cancel</button>   </div>
+                                            </div>}
+                                            
+                                            <div class="text-error">
+                                                @UploadResult
+                                            </div>
+                                            }
+
+            </div>
+        </div>
+
+
+    </EditForm>
+
+</div>
+</div>
+@code
+{
+    [Inject]
+    protected NavigationManager NavigationManager { get; set; }
+    [Inject]
+    public MSN.Model.Util.ServerFileInfo fileInfo { get; set; }
+    [Parameter]
+    public EventCallback<bool> ImagePostStateChangedCallback { get; set; } = new EventCallback<bool>();
+    public ImagePostViewModel Model { get; set; } = new ImagePostViewModel();
+    public bool IsAuthenticated { get { return AuthenticationStateProvider.GetAuthenticationStateAsync().Result.User.Identity.IsAuthenticated; } }
+    public bool DoesntHaveImage { get; set; } = true;
+    public bool HasFailedUpload { get; set; } = false;
+    public string FileControlVisibility { get { return Model?.ImageFiles?.Count == 0 ? "visible;" : "hidden;"; } }
+    public InputFile InputFile1 { get; set; }
+    public bool IsLoading { get; set; } = false;
+    public string UploadResult { get; set; }
+    private long maxFileSize = 1024 * 10000;
+
+
+    async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+
+        int successful=0,unsuccessful=0;
+        UploadResult=string.Empty;
+        IsLoading = true;
+        
+         foreach (var file in e.GetMultipleFiles(maximumFileCount:MSN.ViewModel.Util.Constants.MaxAllowedFiles))
+        {
+            try
+            {
+                var path = Path.Combine(fileInfo.UnsafeImagesRootFolder,file.Name);
+
+                await using FileStream fs = new(path, FileMode.Create);
+                await file.OpenReadStream(maxFileSize).CopyToAsync(fs);
+                Model.ImageFiles.Add(path);
+                successful++;
+                    await fs.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                unsuccessful++;
+                UploadResult +=$"{{File: {file.Name} Error: {ex.Message}}}, ";
+            }
+        }
+        IsLoading = false;
+        
+    }
+
+    protected async Task PostImage()
+    {
+        if (IsLoading)
+        {
+            return;
+        }
+        IsLoading = true;
+        try
+        {
+
+            if (Model?.ImageFiles?.Count > 0)
+            {
+                int resultcount = 0;
+                foreach (var Img in Model.ImageFiles)
+                {
+                    resultcount += await Model.PostNewImageAsync(Img, null, fileInfo, NavigationManager);
+                }
+                HasFailedUpload = resultcount == 0 || Model.ImageFiles.Count > resultcount;
+                Model.ImageFiles?.Clear();
+                if (HasFailedUpload){
+                    int difference =Model.ImageFiles.Count - resultcount;
+                    await MessageBox($"{(difference> 1 ? $"{difference} i":"I")}mage{(difference > 1 ? "s":"")} failed to upload. Try again, ensuring that you only attempt to upload valid images." );
+                }
+                else
+                    await ImagePostStateChangedCallback.InvokeAsync(true);
+            }
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+
+    }
+    protected void CancelImage()
+    {
+        HasFailedUpload = false;
+        Model.ImageFiles?.Clear();
+    } 
+    
+        [Inject]
+        public Microsoft.JSInterop.IJSRuntime jSRuntime { get; set; }
+        protected async Task MessageBox(string Message)
+        {
+            await jSRuntime.InvokeVoidAsync("alert", Message);
+        }
+        protected async ValueTask<bool> ConfirmBox(string Message)
+        {
+            return await jSRuntime.InvokeAsync<bool>("confirm", Message);
+        }
+    }

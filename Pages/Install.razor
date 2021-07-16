@@ -1,0 +1,200 @@
+@page "/install"
+
+@namespace MSN.BlazorServer.Pages
+@using MSN.BlazorServer.Util
+@using Microsoft.AspNetCore.Components;
+@using Microsoft.Extensions.Configuration;
+@using MSN.ModelContext
+@using MSN.BlazorServer.Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Identity
+@using MSN.Model.Util;
+@using MSN.Model
+@inject UserManager<IdentityUser> userManager
+@if(!InstalledAlready)
+{
+<EditForm Model="Install_Model"  aria-autocomplete="off" autocomplete="off" >
+    <div class="card  card-shadow mb-3">
+        <div class="card-header font-weight-bold">
+            MySoloNetwork Setup (pretty simple)
+        </div>
+        <div class="card-body">
+
+            <h4>Create a new account.</h4>
+            <hr />
+            <div asp-validation-summary="All" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="Input.Username">Username</label>
+                <InputText  aria-autocomplete="off" autocomplete="off" asp-for="Input.Username" @bind-Value="Install_Model.UserName" class="form-control" maxlength="100"
+                    id="UserName" placeholder=""></InputText>
+                <span asp-validation-for="Input.Username" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Input.Password">Password</label>
+                <InputText aria-autocomplete="off" autocomplete="off"  asp-for="Input.Password" @bind-Value="Install_Model.Password" type="password" maxlength="100"
+                    class="form-control" id="Password" placeholder=""></InputText>
+                <span asp-validation-for="Input.Password" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Input.ConfirmPassword">Confirm Password</label>
+                <InputText  aria-autocomplete="off" autocomplete="off" asp-for="Input.ConfirmPassword" @bind-Value="Install_Model.ConfirmPassword" type="password"  maxlength="100"
+                    class="form-control" id="ConfirmPassword" placeholder=""></InputText>
+                <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Input.SecurityStatement">Security Statement <h6>(Just something you'd remember, like your favorite car.)</h6></label>
+                <InputText  aria-autocomplete="off" autocomplete="off" asp-for="Input.SecurityStatement" @bind-Value="Install_Model.SecurityStatement" maxlength="100"
+                    class="form-control" id="SecurityStatement" placeholder=""></InputText>
+                <span asp-validation-for="Input.SecurityStatement" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <h4 class="text-error">@CreateResultMessage</h4>
+            </div>
+
+
+
+        </div>
+
+        <div class="card-footer">
+            <button @onclick="SeedDatabase" class="btn btn-primary">Submit</button>
+        </div>
+    </div>
+</EditForm>
+}
+@code {
+    [Inject]
+    public IConfiguration Configuration { get; set; }
+
+    [Inject]
+    protected NavigationManager NavigationManager { get; set; }
+    [Inject]
+    public Microsoft.JSInterop.IJSRuntime jSRuntime { get; set; }
+    [Inject]
+    private MSNBlazorServerContext SecurityContext { get; set; }
+    [Inject]
+    private MSNContext Context { get; set; }
+    [Inject]
+    public ServerFileInfo ServerFileInfo { get; set; }
+    public string CreateResultMessage { get; set; }
+    public bool IsLoading { get; set; }
+    public bool InstalledAlready { get; set; }=false;
+
+    public InstallModel Install_Model { get; set; } = new InstallModel();
+
+    protected async Task SeedDatabase()
+    {
+        try
+        {
+            CreateResultMessage = string.Empty;
+            IsLoading = true;
+            if (string.IsNullOrWhiteSpace(Install_Model.Password) || string.IsNullOrWhiteSpace(Install_Model.ConfirmPassword) ||
+            Install_Model.Password != Install_Model.ConfirmPassword || string.IsNullOrWhiteSpace(Install_Model.UserName))
+            {
+                CreateResultMessage += "{Invalid Entries.} ";
+                return;
+            }
+            else
+                try
+                {
+                    bool SecurityContextCreated;
+                    bool DataContextCreated;
+                    if(!Context.Database.CanConnect())
+                     DataContextCreated = (Context.Database.EnsureCreated());
+                    
+                    if(!SecurityContext.Database.CanConnect())
+                     SecurityContextCreated = (SecurityContext.Database.EnsureCreated());
+
+                }
+                catch(Exception ex)
+                {
+                    CreateResultMessage += $"{{Problem occured while seeding databases. ({(ex.InnerException==null?ex.Message:ex.InnerException.Message)})}} ";
+                }
+                finally
+                {
+
+                }
+
+            try
+            {
+                IdentityUser newUser = new IdentityUser { UserName = Install_Model.UserName, Email = string.Empty };
+                IdentityResult result = await userManager.CreateAsync(newUser, Install_Model.Password);
+                if (result.Succeeded)
+                {                    
+                    foreach (var item in SecurityContext.Users.Where(x=>x.UserName==Install_Model.UserName)) // should be 1.
+                    {
+                          try
+                          {
+                            MSN.BlazorServer.Data.SecurityStatement newStatement = new();
+                            Guid newUserID;
+                            if(Guid.TryParse(item.Id, out newUserID))
+                            {
+                                newStatement.AspNetUsersID=newUserID;
+                                newStatement.Statement=Install_Model.SecurityStatement;
+                                SecurityContext.SecurityStatements.Add(newStatement);
+                                SecurityContext.SaveChanges();
+                            }                              
+                          }
+                          catch (System.Exception)
+                          {                              
+                              // Do nothing for now... 
+                          }  
+                    }
+                    CreateResultMessage += "{Successfully created user.} ";
+
+                    {
+                        LoginAttempt attempt = new LoginAttempt
+                        {
+                            UserName = Install_Model.UserName,
+                            Password = Install_Model.Password,
+                            ReturnUri = NavigationManager.BaseUri
+                        };
+                        Context.LoginAttempt.Add(attempt);
+                        Context.SaveChanges();
+                        NavigationManager.NavigateTo($"/Login/{attempt.Id.ToString()}", true);
+                    }
+                }
+                else
+                {
+                    foreach (var item in result.Errors)
+                        CreateResultMessage += $"{{Error: {item.Description}}} ";
+                    
+                }
+
+            }
+            catch(Exception ex)
+            {
+                CreateResultMessage += $"{{Problem occured while Creating user. ({(ex.InnerException==null?ex.Message:ex.InnerException.Message)}) }} ";
+            }
+            finally
+            {
+
+            }
+
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+
+
+    }
+
+    protected async Task MessageBox(string Message)
+    {
+        await jSRuntime.InvokeVoidAsync("alert", Message);
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        InstalledAlready = (
+                                ServerFileInfo.DefaultContextPresent && 
+                                ServerFileInfo.SecurityContextPresent &&
+                                SecurityContext?.Users?.FirstOrDefault() != null);
+        if(InstalledAlready)
+        {
+            await MessageBox("Setup is complete!");
+            NavigationManager.NavigateTo(NavigationManager.BaseUri, true);
+        }
+    }
+
+}

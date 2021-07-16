@@ -1,0 +1,66 @@
+@namespace MSN.Components
+@using MSN.ViewModel
+@using MSN.Model.Util
+@using MSN.BlazorServer.Util
+@using MSN.Model
+@using MSN.Components.Messaging
+
+@if (ImageModel.Entry.Visible)
+{
+    <EditForm Model="@ImageModel">
+        <div class="card card-shadow ml-1 mr-1 mb-3 p-1  " style=" min-height: 150px;  display:flex; justify-content:center; align-items:center; overflow:hidden;">
+            <img class="card-img " title="@ImageModel.Entry.Comment" style="cursor:pointer;" @onclick="LaunchModal" src="@GetImageLink(ImageModel.Entry.ImageFileLocation)">
+            <ImagePostMessageBoxComponent  @ref="ImagePostMessageBoxComponent"  ItemId="@ImageModel.Entry.Id.ToString()" ImageEntry="@ImageModel.Entry" DateCreated="@ImageModel.Entry.DateCreated" ModalStateChangedCallback="GetResponse"></ImagePostMessageBoxComponent>
+        </div>
+    </EditForm>
+}
+@code {
+
+        [Inject]
+        protected NavigationManager NavigationManager { get; set; }
+        [Inject]
+        public ServerFileInfo fileInfo { get; set; }
+        [Parameter]
+        public EventCallback<bool> ImageStateChangedCallback { get; set; } = new EventCallback<bool>();
+        [Parameter]
+        public string ItemId { get; set; }
+        [Parameter]
+        public ImagePost Image { get; set; }
+    public ImagePostMessageBoxComponent ImagePostMessageBoxComponent { get; set; }
+    public ImagePostViewModel ImageModel { get; set; } = new ImagePostViewModel();
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(ItemId))
+            ImageModel.SetEntry(Guid.Parse(ItemId));
+        if (Image != null)
+            ImageModel.Entry = Image;
+    }
+
+    protected void LaunchModal() { 
+        ImagePostMessageBoxComponent.CheckMainImage();
+        ImagePostMessageBoxComponent.ShowModal = true; 
+        }
+
+    protected void ConfirmDeleteSelectedEntry()
+    {
+        ImagePostMessageBoxComponent.ShowModal = true;
+
+    }
+    protected void GetResponse(MessageBoxResult result)
+    {
+        if (Enum.GetName((typeof(MessageBoxResult)), result) == Enum.GetName((typeof(MessageBoxResult)), MessageBoxResult.Deleted))
+            NavigationManager.NavigateTo(NavigationManager.Uri, true);
+         if (Enum.GetName((typeof(MessageBoxResult)), result) == Enum.GetName((typeof(MessageBoxResult)), MessageBoxResult.Made_Primary))
+            NavigationManager.NavigateTo(NavigationManager.Uri, true);             
+        if (Enum.GetName((typeof(MessageBoxResult)), result) == Enum.GetName((typeof(MessageBoxResult)), MessageBoxResult.Adjusted))
+            TimestampString = DateTime.Now.Millisecond;
+    }
+
+    protected async Task DeleteSelectedEntry()
+    {
+        ImageModel.DeleteEntry();
+        await ImageStateChangedCallback.InvokeAsync(true);
+    }
+    public int TimestampString { get; set; }=DateTime.Now.Millisecond;
+    protected string GetImageLink(string ImageFileLocation) => $"{ImageFileLocation}?timestamp={TimestampString}";
+}

@@ -1,0 +1,77 @@
+
+@namespace MSN.Components
+@using MSN.ViewModel
+@using MSN.Model
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<EditForm Model="@Model">
+    <div class="row-75" style="min-height:100vh;">
+        <div class="col">
+            <div class="row">
+                <div class="col h2"> Notes:</div>
+                @if (IsAuthenticated)
+                {
+                    <div class="col">
+                        <NavLink class="nav-link" href="note">
+                            <span class="oi oi-plus" aria-hidden="true"></span> New Note
+                        </NavLink>
+                    </div>
+                }
+            </div>
+            @if (Model.Entries.Count == 0)
+            {
+                <div class="card">
+                    <div class="card-body">
+                <div class="h5 pl-3">No Notes Created As Of Yet...</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="row row-cols-2 mb-3">
+                    @foreach (var item in Model.Entries)
+                        if (item.PostType == PostTypes.Note)
+                        {
+                            <NoteItemComponent SummaryViewMode="true" NoteStateChangedCallback="NotesChanged" ItemId="@item.Id.ToString()"></NoteItemComponent>
+                        }
+                </div>
+                <div class="row mt-4">
+                    <div class="col">
+                        @if (Model.ShowMore)
+                        {
+                            <button class="btn btn-sm  font-weight-bold  text-success bg-transparent" @onclick="() => LoadOlderPosts()">Load More...</button>
+                        }
+                        else
+                    if (Model.RequestOffset > 0)
+                        {
+                            <p>No More Posts.</p>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</EditForm>
+@code
+{
+
+    public NoteViewerViewModel Model { get; set; } = new NoteViewerViewModel();
+    [Parameter]
+    public EventCallback<bool> NoteStateChangedCallback { get; set; } = new EventCallback<bool>();
+    public bool IsAuthenticated { get { return AuthenticationStateProvider.GetAuthenticationStateAsync().Result.User.Identity.IsAuthenticated; } }
+    protected override void OnParametersSet()
+    {
+        Model.GetNotes();
+    }
+    protected async void LoadOlderPosts()
+    {
+        Model.LoadOlderPosts();
+        StateHasChanged();
+        await NoteStateChangedCallback.InvokeAsync(true);
+    }
+    protected void NotesChanged()
+    {
+        StateHasChanged();
+    }
+
+}

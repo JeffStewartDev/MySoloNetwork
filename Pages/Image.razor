@@ -1,0 +1,48 @@
+@page "/image/{id}"
+@using MSN.ViewModel
+@using MSN.Model
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@if (Model?.Entry != null)
+{
+    <div class="w-100 text-center" style="min-height: 100vh;">
+    <img src="@Model.Entry.ImageFileLocation" class="m-3 mb-5 card-shadow " style="max-width:75%; max-height:75%;"
+        alt="@Model.Entry.Comment">
+</div>
+}
+else
+{
+    <div class="w-100 text-center" style="min-height: 100vh;">Sorry, there's nothing at this address.
+</div>
+}
+
+
+@code {
+    [Parameter]
+    public string id { get; set; }
+    public ImagePostViewModel Model { get; set; } = new ImagePostViewModel();
+
+
+    [Inject]
+    protected NavigationManager NavigationManager { get; set; }
+    [Inject]
+    public MSN.Model.Util.ServerFileInfo ServerFileInfo { get; set; }
+    [Inject]
+    private MSN.BlazorServer.Data.MSNBlazorServerContext SecurityContext { get; set; }
+    [Inject]
+    private MSN.ModelContext.MSNContext DefaultContext { get; set; }
+    protected override void OnInitialized()
+    {
+        if (!ServerFileInfo.PerformDatabaseCheck(SecurityContext, DefaultContext) &&
+        !NavigationManager.Uri.EndsWith("/install")
+        )
+            NavigationManager.NavigateTo("/install", true);
+    }
+    protected override void OnParametersSet()
+    {
+        Guid guid;
+        if (Guid.TryParse(id, out guid))
+        {
+            Model.SetEntry(guid);
+        }
+    } 
+}

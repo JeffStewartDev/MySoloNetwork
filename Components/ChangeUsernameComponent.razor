@@ -1,0 +1,106 @@
+
+@namespace MSN.Components
+@using MSN.ViewModel
+@using Microsoft.AspNetCore.Identity
+@inject AuthenticationStateProvider authenticationStateProvider
+@inject SignInManager<IdentityUser> signInManager
+@inject UserManager<IdentityUser> userManager
+    <EditForm Model="Model" OnValidSubmit="ChangeUsername">
+        <div class="card  card-shadow mb-3">
+            <div class="card-header font-weight-bold">
+                Change Username
+            </div>
+            <div class="card-body">
+                <div class="form-group small">
+                    <label for="OldUsername">Current Username:</label>
+                    <InputText @bind-Value="Model.OldUsername" aria-disabled="disabled" disabled class="form-control" id="OldUsername" placeholder=""></InputText>
+                </div>
+                <div class="form-group small">
+                    <label for="NewUsername">New Username</label>
+                    <InputText @bind-Value="Model.NewUsername" aria-autocomplete="off" autocomplete="off"  class="form-control" id="NewUsername" placeholder=""></InputText>
+                </div>
+                <div class="form-group small">
+                    <label for="ConfirmNewUsername">Confirm New Username</label>
+                    <InputText @bind-Value="Model.ConfirmNewUsername" aria-autocomplete="off" autocomplete="off"  class="form-control" id="ConfirmNewUsername" placeholder=""></InputText>
+                </div>
+            </div>
+
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary">Change</button>
+            </div>
+        </div>
+    </EditForm>
+    @code
+{
+
+
+
+        public UsernameViewModel Model { get; set; } = new UsernameViewModel();
+        [Inject]
+        protected NavigationManager NavigationManager { get; set; }
+
+        protected void RedirectTo(string redirectPath)
+        {
+            NavigationManager.NavigateTo(redirectPath, true);
+        }
+        protected async Task ChangeUsername()
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(Model.NewUsername) || string.IsNullOrWhiteSpace(Model.ConfirmNewUsername))
+                {
+                    throw new Exception("All Username fields are required.");
+                }
+                if (!Model.NewUsername.Equals(Model.ConfirmNewUsername, StringComparison.CurrentCulture))
+                {
+                    throw new Exception("New Username and Confirm Username do not match.");
+                }
+                AuthenticationState authstate = await authenticationStateProvider.GetAuthenticationStateAsync();
+                var user = await userManager.GetUserAsync(authstate.User);
+                if (user == null)
+                {
+                    throw new Exception($"Unable to load user with ID '{userManager.GetUserId(authstate.User)}'.");
+                }
+                var result = await signInManager.UserManager.SetUserNameAsync(user, Model.NewUsername);
+                if (result.Succeeded)
+                {
+                    await MessageBox("Username Changed Successfully.");
+                    Model = new UsernameViewModel();
+                    await userManager.UpdateNormalizedUserNameAsync(user);
+                    Model.OldUsername = user.UserName;
+                }
+                else
+                    throw new Exception(result.Errors.FirstOrDefault()?.Description);
+
+            }
+            catch (Exception ex)
+            {
+                await MessageBox(ex.Message);
+            }
+        }
+
+
+        protected override async Task OnParametersSetAsync()
+        {
+            if (Model != null)
+            {
+                AuthenticationState authstate = await authenticationStateProvider.GetAuthenticationStateAsync();
+                var user = await userManager.GetUserAsync(authstate.User);
+                if(!string.IsNullOrWhiteSpace(authstate?.User?.Identity?.Name))
+                Model.OldUsername = user.UserName;
+            }
+        }
+
+        [Inject]
+        public Microsoft.JSInterop.IJSRuntime jSRuntime { get; set; }
+        protected async Task MessageBox(string Message)
+        {
+            await jSRuntime.InvokeVoidAsync("alert", Message);
+        }
+        protected async ValueTask<bool> ConfirmBox(string Message)
+        {
+            return await jSRuntime.InvokeAsync<bool>("confirm", Message);
+        }
+
+        }
+   

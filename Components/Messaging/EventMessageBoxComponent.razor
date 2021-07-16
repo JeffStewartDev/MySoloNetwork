@@ -1,0 +1,258 @@
+
+@namespace MSN.Components.Messaging
+@using MSN.ViewModel
+@using MSN.Model
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+
+<div hidden="@(!ShowModal)">
+    <EditForm Model="@Model">
+        @if (Model.Entry != null && Model.Entry.Visible)
+        {
+            @if (Model.IsEditMode && IsAuthenticated)
+            {
+                <div class="modal-backdrop show" /> <!-- Modal -->
+                    <div class="modal fade show " style="padding-right: 17px; display: block;" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="false">
+                        <div class="modal-dialog"style="max-width:800px;">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <div class="modal-title" id="myModalLabel">
+                                        <div class="row"> 
+                                            <div class="col">
+                                                Update Event: 
+                                            </div> 
+                                        </div>
+                                    </div>
+                                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true" @onclick="SetFModalResponse">&times;</button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group small">
+                            <label for="Name">Name</label>
+                            <InputText @bind-Value="Model.Entry.Name" class="form-control" id="Name" placeholder="">
+                            </InputText>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group small">
+                            <label for="Location">Location</label>
+                            <InputText @bind-Value="Model.Entry.Location" class="form-control" id="Location" placeholder="">
+                            </InputText>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <DateAndTimeComponent @ref="DateStartComponent"></DateAndTimeComponent>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <label for="Name">Description</label>
+                        <InputTextArea rows="2" id="UpdateText" class="w-100" @bind-Value="Model.Entry.Comment">
+                        </InputTextArea>
+                    </div>
+                </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <div class="row m-0 p-0 small">
+                                        <div class="col-sm text-right">
+                                            <button class="btn btn-primary" @onclick="SavePostEntryEdit">
+                                                Update
+                                            </button>
+                                        </div>
+                                        <div class="col-sm text-right">
+                                            <button type="button" class="btn btn-sm font-weight-bold text-primary bg-transparent" data-dismiss="modal" @onclick="CancelPostEntryEdit">
+                                                Cancel
+                                            </button> 
+                                        </div>
+                                    </div>
+                                </div>
+                            </div><!-- /.modal-content -->
+                        </div>
+                        <!-- /.modal -->
+                    </div> 
+            }
+            else
+            {
+                <div class="modal-backdrop show" /> <!-- Modal -->
+                    <div class="modal fade show" style="padding-right: 17px; display: block;" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="false">
+                        <div class="modal-dialog" style="max-width:800px;">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <div class="modal-title" id="myModalLabel">
+                                        <div class="row"> <div class="col"> <span class="font-weight-bold small text-info">Created @(new MarkupString($"{Model.Entry.DateCreated.ToShortDateString()} @ {Model.Entry.DateCreated.ToShortTimeString()}".Replace(" ","&nbsp;" )))</span> </div> </div>
+                                    </div>
+                                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true" @onclick="SetFModalResponse">&times;</button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="card-body pt-0">
+                                            <div class="row">
+                                                <div class="col text-primary h4 pb-2 font-weight-bold">
+                                                    @(string.IsNullOrWhiteSpace(Model?.Entry?.Name)?"No Title": Model.Entry.Name)
+                                                </div>
+                                            </div>
+
+                                                <div class="row">
+                                                    <div class="col ">
+                                                        <div class="h6 font-weight-bold">When:</div>
+                                                        <div class="row pl-2 ml-2 ">
+                                                            <div class="col h5">
+                                                                @Model.Entry.DateStarts.ToShortDateString()
+                                                            </div>
+                                                            <div class="col h5">
+                                                                @Model.Entry.DateStarts.ToShortTimeString()
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                            @if (!string.IsNullOrWhiteSpace(Model?.Entry?.Location))
+                                            {
+                                                <div class="row">
+                                                    <div class="col ">
+                                                        <div class="h6 font-weight-bold">Location:</div>
+                                                        <div class="row pl-2 ml-2 ">
+                                                            <div class="col h5">
+                                                                @Model.Entry.Location
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            }
+
+                                            @if (!string.IsNullOrWhiteSpace(Model?.Entry?.Comment))
+                                            {
+                                                <div class="row">
+                                                    <div class="col ">
+                                                        <div class="h6 font-weight-bold">Details:</div>
+                                                        <div class=" pl-2 ml-2  @(Model?.Entry?.Comment?.Length <= 150 ? string.Empty:"border" )" style=" overflow-x: auto; max-height:150px; overflow-y:auto;">
+                                                            <span class=" " style="font-size: @(Model?.Entry?.Comment?.Length <= 150 ? "1.25rem":".75rem" );">
+                                                                @(new MarkupString(Model.Entry.Comment))
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            }
+
+
+                                    </div>
+                                </div>
+
+                                @if (isConfirmDeleteMode)
+                                {
+                                    <div class="modal-footer">
+                                        <div class="row m-0 p-0 small alert alert-info">
+                                            <div class="col-sm"> Delete Event? </div>
+                                            <div class="col-sm text-right"> <button class="btn btn-sm  font-weight-bold  text-danger bg-transparent" @onclick="() => DeleteSelectedEntry()">Yes</button>  </div>
+                                            <div class="col-sm text-right"><button type="button" class="btn btn-sm  font-weight-bold  text-primary bg-transparent" data-dismiss="modal" @onclick="() => isConfirmDeleteMode = false">Cancel</button> </div>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="modal-footer">
+                                        <div class="row m-0 p-0 small">
+                                            @if (IsAuthenticated)
+                                            {
+                                                <div class="col-sm">  
+                                                    <button class="btn btn-sm  font-weight-bold  text-primary bg-transparent" @onclick="() => EditSelectedEntry()">Edit</button> 
+                                                </div>
+                                                <div class="col-sm text-right"> 
+                                                    <button class="btn btn-sm  font-weight-bold  text-danger bg-transparent" @onclick="() => isConfirmDeleteMode = true">Delete</button>  
+                                                </div>
+                                            }
+                                            <div class="col-sm text-right">
+                                                <button type="button" class="btn btn-primary" data-dismiss="modal" @onclick="SetTModalResponse">Close</button> 
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div><!-- /.modal-content -->
+                        </div><!-- /.modal -->
+                    </div>
+                }
+            }
+    </EditForm>
+</div>
+@code
+{ 
+    [Parameter]
+    public DateTime DateCreated { get; set; }
+    [Parameter]
+    public string Text { get; set; }
+    [Parameter]
+    public EventCallback<EventItem> ModalStateChangedCallback { get; set; } = new EventCallback<EventItem>();
+    public bool ShowModal { get; set; }
+    [Parameter]
+    public string ItemId { get; set; }
+    DateAndTimeComponent DateStartComponent;
+    public bool isConfirmDeleteMode { get; set; } = false;
+    public bool IsAuthenticated { get { return AuthenticationStateProvider.GetAuthenticationStateAsync().Result.User.Identity.IsAuthenticated; } }
+
+    public EventViewModel Model { get; set; } = new EventViewModel();
+
+    protected async void SetTModalResponse()
+    {
+        await ModalStateChangedCallback.InvokeAsync(Model.Entry);
+        ShowModal = false;
+    }
+    protected async void SetFModalResponse()
+    {
+        await ModalStateChangedCallback.InvokeAsync(Model.Entry);
+        ShowModal = false;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(ItemId))
+            Model.SetEntry(Guid.Parse(ItemId));
+    }
+
+    protected void EditSelectedEntry()
+    {
+        Model.EnterEditMode();
+        StateHasChanged();
+    }
+    protected async Task SavePostEntryEdit()
+    {
+        if (Model?.Entry?.Comment?.Length > 4000)
+        {
+            await MessageBox($"4000 character limit ({Model.Entry.Comment.Length} entered)");
+            return;
+        }
+        if (Model?.Entry?.Comment?.Length < 3)
+        {
+            await MessageBox($"A minimum of 3 characters are required ({Model.Entry.Comment.Length} entered)");
+            return;
+        }
+        Model.Entry.DateStarts = DateStartComponent.GetDateTime();
+        Model.Entry.DateEnds = Model.Entry.DateStarts;
+        Model.SavePostEntryEdit();
+        StateHasChanged();
+    }
+    protected void CancelPostEntryEdit()
+    {
+        Model.CancelPostEntryEdit();
+        StateHasChanged();
+    }
+    protected async void DeleteSelectedEntry()
+    {
+        Model.DeleteEntry();
+        StateHasChanged();
+        await ModalStateChangedCallback.InvokeAsync(Model.Entry);
+    }
+    [Inject]
+    public Microsoft.JSInterop.IJSRuntime jSRuntime { get; set; }
+    protected async Task MessageBox(string Message)
+    {
+        await jSRuntime.InvokeVoidAsync("alert", Message);
+    }
+    protected async ValueTask<bool> ConfirmBox(string Message)
+    {
+        return await jSRuntime.InvokeAsync<bool>("confirm", Message);
+    }
+}

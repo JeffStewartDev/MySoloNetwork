@@ -1,0 +1,101 @@
+
+@namespace MSN.Components
+@using MSN.ViewModel
+@using MSN.Model
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+
+
+
+    <EditForm Model="@Model">
+        @if (Model?.CurrentAlbum != null && Model.CurrentAlbum.Visible)
+        {
+        <div class="card card-shadow  ml-2 mr-2 mb-3" style="cursor:pointer;">
+            <div @onclick='() => RedirectTo(string.Format("/AlbumView/{0}", Model.CurrentAlbum.Id.ToString()))' style="padding: 5px 5px; margin-bottom: 0px; background-color: rgb(78,82,231); border-bottom: 1px solid Black; color: white; ">
+                <div class="row">
+                    <div class="col"> @Model.CurrentAlbum.DateCreated.ToShortDateString() </div>
+                    <div class="col text-center"> @($"{Model.CurrentAlbum.ImagePosts.Count} Image{(Model.CurrentAlbum.ImagePosts.Count == 1?"":"s")}") </div>
+                    <div class="col text-right"> @Model.CurrentAlbum.DateCreated.ToShortTimeString() </div>
+                </div>
+                <div class="row"><div class="col text-center" style="cursor:pointer;" @onclick='() => RedirectTo(string.Format("/AlbumView/{0}", Model?.CurrentAlbum?.Id.ToString()))'> <p class="h2 text-capitalize"> @Model.CurrentAlbum.Name</p> </div>  </div>
+            </div>
+            <div class="card-body" style="cursor:pointer;" @onclick='() => RedirectTo(string.Format("/AlbumView/{0}", Model.CurrentAlbum.Id.ToString()))'>
+                <img class="card-img" style="vertical-align:auto;" src="@Model.GetFirstImage()">
+            </div>
+
+
+            @if (isConfirmDeleteMode && IsAuthenticated)
+            {
+                <div style="padding: 5px 5px; margin-bottom: 0px; background-color: white;">
+                    <div class="row">
+                        <div class="modal-footer">
+                            <div class="row m-0 p-0 small alert alert-info">
+                                <div class="col-sm"> Delete Album? </div>
+                                <div class="col-sm text-right"> <button class="btn btn-sm  font-weight-bold  text-danger bg-transparent" @onclick="() => DeleteSelectedEntry()">Yes</button>  </div>
+                                <div class="col-sm text-right"><button type="button" class="btn btn-sm  font-weight-bold  text-primary bg-transparent" data-dismiss="modal" @onclick="() => isConfirmDeleteMode = false">Cancel</button> </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (IsAuthenticated)
+            {
+                <div style="padding: 5px 5px; margin-bottom: 0px; background-color: white;">
+                    <div class="row">
+                        <div class="col">
+                            <p>
+                                <button class="btn btn-sm font-weight-bold  text-primary bg-transparent" @onclick='() => RedirectTo(string.Format("/AlbumView/{0}", Model.CurrentAlbum.Id.ToString()))'>View</button>
+                            </p>
+                        </div>
+                        <div class="col text-center">
+                            <p>
+                                <button class="btn btn-sm font-weight-bold  text-success bg-transparent" @onclick='() => RedirectTo(string.Format("/Album/{0}", Model.CurrentAlbum.Id.ToString()))'>Edit</button>
+                            </p>
+                        </div>
+                        <div class="col text-right"> <p> <button class="btn btn-sm font-weight-bold  text-danger bg-transparent" @onclick="() => isConfirmDeleteMode = true">Delete</button> </p> </div>
+
+                    </div>
+                </div>
+            }
+        </div>
+        }
+    </EditForm>
+    @code
+{
+        [Parameter]
+        public string ItemId { get; set; }
+        [Parameter]
+        public AlbumPostItem Item { get; set; }
+        public bool IsAuthenticated { get { return AuthenticationStateProvider.GetAuthenticationStateAsync().Result.User.Identity.IsAuthenticated; } }
+        public bool isConfirmDeleteMode { get; set; } = false;
+
+
+
+        [Inject]
+        protected NavigationManager NavigationManager { get; set; }
+
+        protected void RedirectTo(string redirectPath)
+        {
+            NavigationManager.NavigateTo(redirectPath, true);
+        }
+
+        protected override void OnParametersSet()
+        {
+            if (!string.IsNullOrWhiteSpace(ItemId))
+                Model.SetAlbum(Guid.Parse(ItemId));
+            else
+            if (Item != null)
+                Model.SetAlbum(Item.Id);
+        }
+        public AlbumViewerViewModel Model { get; set; } = new AlbumViewerViewModel();
+
+
+
+
+        protected void DeleteSelectedEntry()
+        {
+            Model.DeleteCurrentAlbum();
+            StateHasChanged();
+        }
+
+    }

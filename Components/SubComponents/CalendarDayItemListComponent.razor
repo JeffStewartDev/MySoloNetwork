@@ -1,0 +1,99 @@
+
+@namespace MSN.Components.SubComponents
+@using MSN.BlazorServer.Util.Enums
+@using MSN.ViewModel
+@using Microsoft.AspNetCore.Components
+@using MSN.Model
+@*CalendarDayItemListComponent*@
+<style>
+.row-cols-1 > * {
+  -ms-flex: 0 0 50vw;
+  flex: 0 0 50vw;
+  max-width: 50vw;
+}
+</style>
+@if (Entries?.Count > 0)
+{
+
+<div class="card h-100 mb-4 card-shadow">
+    <div class="card-header font-weight-bold">
+        @if (DayToShow?.Date.Year > 1950)
+        {@($"{DayToShow?.Date.ToLongDateString()} - {Enum.GetName(typeof(CalendarItemSelected), SelectedType)}s")}
+    </div>
+    <div class="card-body" style="background-color:rgba(0,0,0,0.1);">
+
+        <div class="row @(Entries.Count < 3 ? $"row-cols-{Entries.Count}":"row-cols-3")">
+            @foreach (var item in Entries)
+                switch (item.PostType)
+                {
+                    case PostTypes.StatusUpdate:
+                    <div class="col">
+                        <StatusUpdateEntryComponent StatusStateChangedCallback="StatusChanged" ItemId="@item.Id.ToString()"></StatusUpdateEntryComponent>
+                    </div> break;
+                    case PostTypes.Image:
+                    <div class="col">
+                        <ImagePostDisplayComponent ImageStateChangedCallback="StateChanged" ItemId="@item.Id.ToString()"></ImagePostDisplayComponent>
+                    </div> break;
+                    case PostTypes.Album:
+                    <div class="col">
+                        <AlbumItemComponent ItemId="@item.Id.ToString()"></AlbumItemComponent>
+                    </div> break;
+                    case PostTypes.Note:
+                    <div class="col">
+                        <NoteItemComponent SummaryViewMode="true" NoteStateChangedCallback="StateChanged" ItemId="@item.Id.ToString()"></NoteItemComponent>
+                    </div>break;
+                    case PostTypes.Event:
+                    <div class="col">
+                        <EventComponent SummaryViewMode="true" EventStateChangedCallback="StatusChanged" ItemId="@item.Id.ToString()"></EventComponent>
+                    </div>break;
+                    default:
+                    break;
+                }
+
+        </div>
+    </div>
+</div>}
+
+@code { [Parameter]
+    public CalendarItemSelected SelectedType { get; set; }
+    [Parameter]
+    public MSN.ViewModel.Util.CalendarDay DayToShow { get; set; }
+    [Parameter]
+    public List<UpdatePostItem> Entries { get; set; } = new List<UpdatePostItem>();
+
+    public async Task LoadEntries(CalendarItemSelected selectedType, MSN.ViewModel.Util.CalendarDay dayToShow)
+    {
+        SelectedType = selectedType;
+        DayToShow = dayToShow;
+        if (DayToShow != null)
+        {
+            switch (SelectedType)
+            {
+                case CalendarItemSelected.Album:
+                    Entries = DayToShow.Posts?.Where(x => x.PostType == PostTypes.Album).ToList();
+                    break;
+                case CalendarItemSelected.Image:
+                    Entries = DayToShow.Posts?.Where(x => x.PostType == PostTypes.Image).ToList();
+                    break;
+                case CalendarItemSelected.Note:
+                    Entries = DayToShow.Posts?.Where(x => x.PostType == PostTypes.Note).ToList();
+                    break;
+                case CalendarItemSelected.Post:
+                    Entries = DayToShow.Posts?.Where(x => x.PostType == PostTypes.StatusUpdate).ToList();
+                    break;
+                case CalendarItemSelected.Event:
+                    Entries = DayToShow.Posts?.Where(x => x.PostType == PostTypes.Event).ToList();
+                    break;
+                default:
+                    break;
+            }
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+    public void StatusChanged(Guid result)
+    {
+    }
+    public void StateChanged(bool result)
+    {
+    } 
+    }

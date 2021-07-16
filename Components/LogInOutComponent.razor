@@ -1,0 +1,297 @@
+@namespace MSN.Components
+@using MSN.ViewModel
+@using MSN.Model
+@using MSN.Model.Util
+@using Microsoft.AspNetCore.Identity
+@using MSN.ModelContext
+@using MSN.BlazorServer.Data
+
+<AuthorizeView Context="AuthViewContext">
+    <Authorized>
+        <NavLink class="nav-link" href="logout" Match="NavLinkMatch.All">
+            Log Out @GetUserName()
+        </NavLink>
+    </Authorized>
+    <NotAuthorized>
+        @if (DisplayLoginForm)
+                {
+
+        <EditForm aria-autocomplete="off" autocomplete="off" Model="Model">
+            <div class="row  @(DisplayLoginFormOnStartup?"row-cols-2":"row-cols-3") ">
+                <div class="col">
+                    <InputText @bind-Value="Model.UserName" class="form-control-sm" id="Username" placeholder="UserName" >
+                    </InputText>
+                </div>
+                <div class="col">
+                    <InputText @bind-Value="Model.Password" class="form-control-sm" id="Password" type="password"
+                        placeholder="Password" ></InputText>
+                </div>
+                @if (!DisplayLoginFormOnStartup)
+                {
+                    <div class="col">
+                        <table class="table m-0 p-0">
+                            <tr class=" m-0 p-0">
+                                <td class=" m-0 p-0" style="border-style:none;">
+                                    <button class="btn btn-sm btn-primary" @onclick="LoginUser">Log&nbsp;In</button>
+                                </td>
+                                <td class=" m-0 p-0" style="border-style:none;">
+                                    <button class="btn btn-sm btn-error" @onclick="ResetForm">Cancel</button>
+                                </td>
+                                <td class=" m-0 p-0" style="border-style:none;">
+                                    <button class="btn btn-sm btn-link" @onclick="InvertForgottenPasswordForm">Forgot</button>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                }
+            </div>
+            @if (DisplayLoginFormOnStartup)
+            {
+                <div class="row  row-cols-2 m-0 ml-4  p-3">
+                    <div class="col m-0 p-0">
+                        <button class="btn btn-sm btn-primary" @onclick="LoginUser">Log&nbsp;In</button>
+                    </div>
+                    <div class="col m-0 p-0">
+                        <button class="btn btn-sm btn-link" @onclick="InvertForgottenPasswordForm">Forgot</button>
+                    </div>
+                </div>
+            }
+        </EditForm>
+        }
+                else
+        if (DisplayForgottenPasswordForm)
+                {
+
+        <EditForm aria-autocomplete="off" autocomplete="off" Model="Model">
+            <div class="row  row-cols-3 ml-4 ">
+                <div class="col">
+                    <InputText @bind-Value="Model.UserName" aria-autocomplete="off" autocomplete="off"
+                        class="form-control-sm" id="Username" placeholder="UserName" >
+                    </InputText>
+                </div>
+                <div class="col">
+                    <InputText @bind-Value="Model.SecurityStatement" type="password" aria-autocomplete="off"
+                        autocomplete="off" class="form-control-sm" id="SecurityStatement" placeholder="Security Statement" >
+                    </InputText>
+                </div>
+                <div class="col">
+                    <div>
+                        <table>
+                            <tr>
+                                <td style="border-style:none;"><button class="btn btn-sm btn-primary"
+                                        @onclick="ResetUser">Reset</button></td>
+                                <td style="border-style:none;"><button class="btn btn-sm btn-error"
+                                        @onclick="ResetForm">Cancel</button></td>
+                            </tr>
+                        </table>
+
+                    </div>
+
+
+                </div>
+            </div>
+        </EditForm>
+        }
+                else
+                {
+        <button class="btn btn-sm  btn-link" @onclick="() => DisplayLoginForm=true">Log In</button>
+        }
+    </NotAuthorized>
+</AuthorizeView>
+
+@code
+{
+    [Parameter]
+    public bool DisplayLoginFormOnStartup
+    {
+        get { return displayLoginFormOnStartup; }
+        set { displayLoginFormOnStartup = value; if (DisplayLoginFormOnStartup) DisplayLoginForm = displayLoginFormOnStartup; }
+    }
+    private bool displayLoginFormOnStartup;
+    public bool DisplayLoginForm { get; set; } = false;
+    public bool DisplayForgottenPasswordForm { get; set; } = false;
+    public LoginUserModel Model { get; set; } = new LoginUserModel();
+    [Inject]
+    protected NavigationManager NavigationManager { get; set; }
+    [Inject]
+    public AuthenticationStateProvider AuthenticationStateProvider { get; set; }
+
+    [Inject]
+    protected SignInManager<IdentityUser> signInManager { get; set; }
+    [Inject]
+    public ServerFileInfo fileInfo { get; set; }
+    [Inject]
+    public MSNBlazorServerContext SecurityContext { get; set; }
+    public bool IsLoading { get; set; } = false;
+    protected string GetUserName()
+    {
+        AccountViewModel Model = new AccountViewModel(fileInfo);
+        return Model.Full_Name;
+    }
+    protected override Task OnInitializedAsync()
+    {
+
+        return base.OnInitializedAsync();
+    }
+
+    protected async Task LoginUser()
+    {
+        if (IsLoading)
+        {
+            return;
+        }
+
+        if (IsPasswordValid() && IsUserNameValid())
+        {
+            try
+            {
+                IsLoading = true;
+                bool successfulLogin = false;
+
+                try
+                {
+                    //This will fail with InvalidOperationException if the user logged in successfully.
+                    var result = await signInManager.PasswordSignInAsync(Model.UserName, Model.Password, false, false);
+
+
+                    if (result.Succeeded)
+                    {
+                        // Won't occur in current Blazor version.
+                    }
+                    else if (result.IsLockedOut)
+                    {
+                        throw new Exception("User account locked out.");
+                    }
+                    else
+                        throw new Exception("Invalid login attempt.");
+
+
+                }
+                catch (InvalidOperationException)
+                {
+                    successfulLogin = true;
+                }
+                using (MSNContext context = new MSNContext())
+                {
+                    LoginAttempt attempt = new LoginAttempt
+                    {
+                        UserName = Model.UserName,
+                        Password = Model.Password,
+                        ReturnUri = (DisplayLoginFormOnStartup) ? NavigationManager.BaseUri : NavigationManager.Uri
+                    };
+                    context.LoginAttempt.Add(attempt);
+                    context.SaveChanges();
+                    RedirectTo($"/Login/{attempt.Id.ToString()}", successfulLogin);
+                }
+
+            }
+            catch (Exception )
+            {
+                Random randomNumber = new Random(DateTime.Now.Millisecond);
+                System.Threading.Thread.Sleep((randomNumber.Next(2, 10) * 1000));
+                await MessageBox("Login Attempt Failed. Try Again.");
+
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+        else
+        {
+            Random randomNumber = new Random(DateTime.Now.Millisecond);
+            System.Threading.Thread.Sleep((randomNumber.Next(2, 10) * 1000));
+                await MessageBox("Login Attempt Failed. Try Again.");
+        }
+    }
+    protected async Task ResetUser()
+    {
+        if (IsLoading || string.IsNullOrWhiteSpace(Model.SecurityStatement))
+        {
+            return;
+        }
+
+        try
+        {
+            IsLoading = true;
+            string result = await Model.ResetUserPassword(SecurityContext, signInManager);
+
+            if (string.IsNullOrWhiteSpace(result))
+                throw new Exception("Invalid Security Statement");
+            await MessageBox($"Password successfully reset to: {result}");
+            Model.Password = null;
+            Model.SecurityStatement = null;
+            ResetForm();
+            if (!displayLoginFormOnStartup)
+                DisplayLoginForm = true;
+        }
+        catch (Exception )
+        {
+            Random randomNumber = new Random(DateTime.Now.Millisecond);
+            System.Threading.Thread.Sleep((randomNumber.Next(2, 10) * 1000));
+                await MessageBox("Reset Attempt Failed. Try Again.");
+
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    protected bool IsPasswordValid()
+    {
+        bool result = true;
+        if (string.IsNullOrWhiteSpace(Model.Password))
+        {
+            result = false;
+        }
+        return result;
+    }
+
+    protected bool IsUserNameValid()
+    {
+        bool result = true;
+        if (string.IsNullOrWhiteSpace(Model.UserName))
+        {
+            result = false;
+        }
+        return result;
+    }
+    protected async Task LogUserOut()
+    {
+        await Task.Run(signInManager.SignOutAsync);
+        RedirectTo(NavigationManager.BaseUri, forceLoad: true);
+    }
+
+    [Inject]
+    public Microsoft.JSInterop.IJSRuntime jSRuntime { get; set; }
+    protected async Task MessageBox(string Message)
+    {
+        await jSRuntime.InvokeVoidAsync("alert", Message);
+    }
+    protected async ValueTask<bool> ConfirmBox(string Message)
+    {
+        return await jSRuntime.InvokeAsync<bool>("confirm", Message);
+    }
+    protected void InvertLoginForm()
+    {
+        DisplayLoginForm = !DisplayLoginForm;
+        DisplayForgottenPasswordForm = false;
+    }
+    protected void InvertForgottenPasswordForm()
+    {
+        DisplayForgottenPasswordForm = !DisplayForgottenPasswordForm;
+        DisplayLoginForm = false;
+    }
+    protected void ResetForm()
+    {
+        DisplayLoginForm = false;
+        DisplayForgottenPasswordForm = false;
+        DisplayLoginFormOnStartup = DisplayLoginFormOnStartup;
+    }
+    protected void RedirectTo(string redirectPath, bool forceLoad = false)
+    {
+        NavigationManager.NavigateTo(redirectPath, forceLoad);
+    }
+
+}

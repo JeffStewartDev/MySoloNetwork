@@ -1,0 +1,6 @@
+bin/
+obj/
+Data/
+wwwroot/segmi/
+unsafe_uploads/
+.vscode/

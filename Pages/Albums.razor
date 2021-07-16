@@ -1,0 +1,23 @@
+@page "/albums"
+@using MSN.Components
+
+<AlbumListComponent></AlbumListComponent>
+@code{
+    
+
+    [Inject]
+    protected NavigationManager NavigationManager { get; set; }
+    [Inject]
+    public MSN.Model.Util.ServerFileInfo ServerFileInfo { get; set; }
+    [Inject]
+    private MSN.BlazorServer.Data.MSNBlazorServerContext SecurityContext { get; set; }
+    [Inject]
+    private MSN.ModelContext.MSNContext DefaultContext { get; set; }
+    protected override void OnInitialized()
+    {
+        if (!ServerFileInfo.PerformDatabaseCheck(SecurityContext, DefaultContext) &&
+        !NavigationManager.Uri.EndsWith("/install")
+        )
+            NavigationManager.NavigateTo("/install", true);
+    }
+}

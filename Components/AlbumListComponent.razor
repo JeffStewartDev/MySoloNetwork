@@ -1,0 +1,92 @@
+
+@namespace MSN.Components
+@using MSN.ViewModel
+@using MSN.Model
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+
+    <EditForm Model="@Model">
+<div class="row-75" style="min-height:100vh;">
+        <div class="col">
+            <div class="row">
+                <div class="col h2"> Albums:</div>
+                <div class="col text-right">
+                    @if (IsAuthenticated)
+                    {
+                        <NavLink class="nav-link" href="album">
+                            <span class="oi oi-plus" aria-hidden="true"></span> New Album
+                        </NavLink>
+                    }
+                </div>
+
+            </div>
+        </div>
+        
+            @if (Model.Entries.Count == 0)
+            {
+                <div class="card">
+                    <div class="card-body">
+                <div class="h5 pl-3">No Albums Created As Of Yet...</div>
+                    </div>
+                </div>
+            }
+            else{
+        <div class="container-fluid">
+            <div class="row row-cols-2">
+                @foreach (var item in Model.Entries)
+                {
+                    <div class="col mb-3">
+                        @if (item.PostType == PostTypes.Album)
+                        {
+                            <AlbumItemComponent Item="@item"></AlbumItemComponent>
+                            //System.Timers.Timer timer = new System.Timers.Timer();
+                            //timer.Start();
+                            //timer.Stop();
+                            //string time = timer.Interval.ToString();
+                            //timer.Dispose();
+                        }
+                        else
+                 if (item.PostType == PostTypes.Image)
+                        {
+                            <ImagePostDisplayComponent ItemId="@item.Id.ToString()"></ImagePostDisplayComponent>
+                            <br />
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="container-fluid">
+            <div class="row mt-4">
+                <div class="col">
+                    @if (Model.ShowMore)
+                    {
+                        <button class="btn btn-sm  font-weight-bold  text-primary bg-transparent" @onclick="() => LoadOlderPosts()">Load More...</button>
+                    }
+                    else
+            if (Model.RequestOffset > 0)
+                    {
+                        <p>No More Posts.</p>
+                    }
+                </div>
+            </div>
+        </div>
+            }
+</div>
+    </EditForm>
+@code
+{
+
+    public bool IsAuthenticated { get { return AuthenticationStateProvider.GetAuthenticationStateAsync().Result.User.Identity.IsAuthenticated; } }
+    public AlbumViewerViewModel Model { get; set; } = new AlbumViewerViewModel();
+    protected override void OnParametersSet()
+    {
+        Model.GetAlbums();
+    }
+    protected void LoadOlderPosts()
+    {
+        Model.LoadOlderPosts();
+        StateHasChanged();
+    }
+
+}

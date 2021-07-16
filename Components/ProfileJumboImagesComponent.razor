@@ -1,0 +1,66 @@
+@namespace MSN.Components
+@using MSN.ViewModel
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using MSN.Model.Util
+@using MSN.Model
+
+<div class="card w-100 mb-3" style=" height:300px; display:flex; justify-content:center; align-items:center; overflow:hidden;">
+
+    <object class="card-img" style="" data="@GetImageLink(Model.Home_Page_Jumbotron_Picture.AbsoluteFilePath)" type="image/png" alt="@Model.Full_Name">
+        <img class="card-img" src="/Default/large.jpg" alt="">
+    </object>
+
+    <table class="position-absolute " style="bottom: 10px; left: 10px;">
+        <tr>
+            <td class="img-thumbnail">
+                <object  style="max-height: 200px; min-width:200px; width:200px; bottom: 0px;"
+                    data="@GetImageLink(Model.Home_Page_Profile_Picture.AbsoluteFilePath)" type="image/png" alt="">
+                    <img  style="max-height: 200px; min-width:200px; width:200px; bottom: 0px;" src="/Default/profile.jpg" alt="" />
+                </object>
+            </td>
+            <td class="align-bottom">
+                <div style="text-shadow: 5px 1px 5px #000000" class="font-weight-bolder text-light h1 ml-2 mb-1">
+
+                    @if (IsAuthenticated)
+                    {
+                        <NavLink class="nav-link pl-0" style="color:white;" href="account">
+                            @((string.IsNullOrWhiteSpace(Model.Full_Name)?"New User": Model.Full_Name))
+                        </NavLink>
+
+                    }
+                    else
+                    {
+                        @((string.IsNullOrWhiteSpace(Model.Full_Name)?"New User": Model.Full_Name))
+
+                    }
+                </div>
+            </td>
+        </tr>
+    </table>
+</div>
+
+@code
+{
+    [Inject]
+    public ServerFileInfo fileInfo { get; set; }
+    public bool IsAuthenticated
+    {
+        get
+        {
+            return AuthenticationStateProvider.GetAuthenticationStateAsync().Result.User.Identity.IsAuthenticated;
+        }
+    }
+    public AccountViewModel Model { get; set; }
+    protected override void OnParametersSet()
+    {
+        Model = Model ?? (new AccountViewModel(fileInfo));
+        base.OnParametersSet();
+    }
+    public int TimestampString { get; set; }=DateTime.Now.Millisecond;
+    protected string GetImageLink(string ImageFileLocation) {
+        if(string.IsNullOrWhiteSpace(ImageFileLocation))
+        return ImageFileLocation;
+        else
+         return $"{ImageFileLocation}?timestamp={TimestampString}";
+    }
+}

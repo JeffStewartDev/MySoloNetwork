@@ -1,0 +1,34 @@
+@page "/noteview"
+@page "/noteview/{ItemId}"
+@using MSN.Components
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<NoteUpsertComponent NoteStateChangedCallback="NotesChanged" ItemId="@ItemId"></NoteUpsertComponent>
+
+
+@code {
+    [Parameter]
+    public string ItemId { get; set; }
+
+    [Inject]
+    protected NavigationManager NavigationManager { get; set; }
+    [Inject]
+    public MSN.Model.Util.ServerFileInfo ServerFileInfo { get; set; }
+    [Inject]
+    private MSN.BlazorServer.Data.MSNBlazorServerContext SecurityContext { get; set; }
+    [Inject]
+    private MSN.ModelContext.MSNContext DefaultContext { get; set; }
+    protected override void OnInitialized()
+    {
+        if (!ServerFileInfo.PerformDatabaseCheck(SecurityContext, DefaultContext) &&
+        !NavigationManager.Uri.EndsWith("/install")
+        )
+            NavigationManager.NavigateTo("/install", true);
+    }
+
+
+    protected void NotesChanged()
+    {
+        NavigationManager.NavigateTo("/notes/", true);
+    }
+}

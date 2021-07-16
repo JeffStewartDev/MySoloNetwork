@@ -1,0 +1,216 @@
+@namespace MSN.Components
+@using MSN.ViewModel
+@using Microsoft.AspNetCore.Components
+@using MSN.Components.SubComponents
+@using MSN.BlazorServer.Util.Enums
+
+<style type="text/css">
+
+    .row-cols-7 > * {
+        -ms-flex: 0 0 14.28571428571429%;
+        flex: 0 0 14.28571428571429%;
+        max-width: 14.28571428571429%;
+    }
+</style>
+<CalendarDayItemListComponent @ref="CalendarDayItemListComponent"></CalendarDayItemListComponent>
+<div class="card card-shadow mb-5">
+    <div class="card-header">
+        <EditForm Model="Model" OnSubmit="Model.GenerateMonth">
+            <div class="mb-3 mt-3">
+                <div class="row">
+                    <div class="col">
+                        <div class="row input-group">
+                            <div class="col text-right font-weight-bold">Month</div>
+                            <div class="col">
+                                <InputSelect @bind-Value="CurrentMonth">
+                                    <option value="1">January</option>
+                                    <option value="2">February</option>
+                                    <option value="3">March</option>
+                                    <option value="4">April</option>
+                                    <option value="5">May</option>
+                                    <option value="6">June</option>
+                                    <option value="7">July</option>
+                                    <option value="8">August</option>
+                                    <option value="9">September</option>
+                                    <option value="10">October</option>
+                                    <option value="11">November</option>
+                                    <option value="12">December</option>
+                                </InputSelect>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="row input-group">
+                            <div class="col text-right font-weight-bold">Year</div>
+                            <div class="col">
+                                <InputSelect @bind-Value="@CurrentYear">
+                                    @for (int i = Model.MaxDate.Year; i > Model.MinDate.Year; i--)
+                                    {
+                                        <option value="@i">@i</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </EditForm>
+
+    </div>
+    <div class="card-body">
+        <div>
+
+            <div class="">
+                <div class="row row-cols-7 mb-3 font-weight-bold text-secondary">
+                    <div class="col">
+                        Sunday
+                    </div>
+                    <div class="col">
+                        Monday
+                    </div>
+                    <div class="col">
+                        Tuesday
+                    </div>
+                    <div class="col">
+                        Wednesday
+                    </div>
+                    <div class="col">
+                        Thursday
+                    </div>
+                    <div class="col">
+                        Friday
+                    </div>
+                    <div class="col">
+                        Saturday
+                    </div>
+                </div>
+                @foreach (var item in Model.CurrentMonth.CalendarWeeks)
+                {
+                    <div class="row row-cols-7 mb-3">
+                        <div class="col p-1">
+
+                            @if (item.Sunday.Day == 0)
+                            {
+                                <span>&nbsp;</span>
+                            }
+                            else
+                            {
+                                <CalendarDayComponent item="item.Sunday" ItemSelected="HandleItemSelected"></CalendarDayComponent>
+
+                            }
+
+                        </div>
+                        <div class="col p-1">
+                            @if (item.Monday.Day == 0)
+                            {
+                                <span>&nbsp;</span>
+                            }
+                            else
+                            {
+                                <CalendarDayComponent item="item.Monday" ItemSelected="HandleItemSelected"></CalendarDayComponent>
+
+                            }
+
+                        </div>
+                        <div class="col p-1">
+                            @if (item.Tuesday.Day == 0)
+                            {
+                                <span>&nbsp;</span>
+                            }
+                            else
+                            {
+                                <CalendarDayComponent item="item.Tuesday" ItemSelected="HandleItemSelected"></CalendarDayComponent>
+                            }
+
+                        </div>
+                        <div class="col p-1">
+                            @if (item.Wednesday.Day == 0)
+                            {
+                                <span>&nbsp;</span>
+                            }
+                            else
+                            {
+                                <CalendarDayComponent item="item.Wednesday" ItemSelected="HandleItemSelected"></CalendarDayComponent>
+                            }
+
+                        </div>
+                        <div class="col p-1">
+                            @if (item.Thursday.Day == 0)
+                            {
+                                <span>&nbsp;</span>
+                            }
+                            else
+                            {
+                                <CalendarDayComponent item="item.Thursday" ItemSelected="HandleItemSelected"></CalendarDayComponent>
+                            }
+
+                        </div>
+                        <div class="col p-1">
+                            @if (item.Friday.Day == 0)
+                            {
+                                <span>&nbsp;</span>
+                            }
+                            else
+                            {
+                                <CalendarDayComponent item="item.Friday" ItemSelected="HandleItemSelected"></CalendarDayComponent>
+                            }
+
+                        </div>
+                        <div class="col p-1">
+                            @if (item.Saturday.Day == 0)
+                            {
+                                <span>&nbsp;</span>
+                            }
+                            else
+                            {
+                                <CalendarDayComponent item="item.Saturday" ItemSelected="HandleItemSelected"></CalendarDayComponent>
+                            }
+
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    public MSN.Components.SubComponents.CalendarDayItemListComponent CalendarDayItemListComponent;
+    public CalendarViewModel Model { get; set; } = new CalendarViewModel();
+    public string CurrentMonth
+    {
+        get { return Model.Month; }
+        set
+        {
+            Model.Month = value;
+            HandleMonthDropdownChanged();
+        }
+    }
+    public string CurrentYear
+    {
+        get { return Model.Year; }
+        set
+        {
+            Model.Year = value;
+            HandleYearDropdownChanged();
+        }
+    }
+    protected MarkupString Pluralize(string word, int count)
+    {
+        return new MarkupString($"<b>{count.ToString()}</b>&nbsp;{word}{(count > 1 ? "s" : string.Empty)}");
+    }
+    protected async void HandleItemSelected(KeyValuePair<CalendarItemSelected, MSN.ViewModel.Util.CalendarDay> result)
+    {
+        await CalendarDayItemListComponent.LoadEntries(result.Key, result.Value);
+    }
+    protected void  HandleMonthDropdownChanged()
+    {
+        Model.GenerateMonth();
+    }
+    protected void HandleYearDropdownChanged()
+    {
+        Model.GenerateMonth();
+    }
+
+}

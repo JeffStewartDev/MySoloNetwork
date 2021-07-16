@@ -1,0 +1,109 @@
+@namespace MSN.Components
+@using MSN.ViewModel
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+
+
+
+<EditForm Model="@Model">
+
+    @if (IsAuthenticated)
+    {
+
+        <div class="row-75">
+            <div class="col">
+                <div class="row">
+                    <div class="col mt-2 font-weight-bold">Create Post: </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <InputTextArea rows="2" id="UpdateText" class="w-100" @bind-Value="Model.Entry.Text">
+                        </InputTextArea>
+                    </div>
+                </div>
+                <div class="row small">
+                    <div class="col">
+                        <p> <button class="btn btn-sm  font-weight-bold  text-primary bg-transparent"
+                            @onclick="PostEntry">Update</button> </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    </EditForm>
+    @code
+    {
+    [Parameter]
+    public string ItemId { get; set; }
+    [Parameter]
+    public EventCallback<bool> StatusPostStateChangedCallback { get; set; } = new EventCallback<bool>();
+    public bool IsAuthenticated
+    {
+        get
+        {
+            return
+            AuthenticationStateProvider.GetAuthenticationStateAsync().Result.User.Identity.IsAuthenticated;
+        }
+    }
+    public bool IsLoading { get; set; } = false;
+    protected override void OnParametersSet()
+    {
+        Model.DefineNewEntry();
+        if (!string.IsNullOrWhiteSpace(ItemId))
+            Model.SetEntry(Guid.Parse(ItemId));
+    }
+    public StatusUpdateEntryViewModel Model { get; set; } = new StatusUpdateEntryViewModel();
+
+    protected void EditSelectedEntry()
+    {
+        Model.EnterEditMode();
+        StateHasChanged();
+    }
+
+    public async Task PostEntry()
+    {
+        if (IsLoading)
+        {
+            return;
+        }
+        else
+            try
+            {
+                IsLoading = true;
+                if (Model?.Entry?.Text?.Length > 4000)
+                {
+                    await MessageBox($"4000 character limit ({Model.Entry.Text.Length} entered)");
+                    return;
+                }
+                if (Model?.Entry?.Text?.Length < 3)
+                {
+                    await MessageBox($"A minimum of 3 characters are required ({Model.Entry.Text.Length} entered)");
+                    return;
+                }
+                Model.PostEntry();
+                StateHasChanged();
+                await StatusPostStateChangedCallback.InvokeAsync(true);
+
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+    }
+    protected async void CancelPost()
+    {
+        Model.ClearEntry();
+        StateHasChanged();
+        await StatusPostStateChangedCallback.InvokeAsync(true);
+    }
+    [Inject]
+    public Microsoft.JSInterop.IJSRuntime jSRuntime { get; set; }
+    protected async Task MessageBox(string Message)
+    {
+        await jSRuntime.InvokeVoidAsync("alert", Message);
+    }
+    protected async ValueTask<bool> ConfirmBox(string Message)
+    {
+        return await jSRuntime.InvokeAsync<bool>("confirm", Message);
+    }
+}

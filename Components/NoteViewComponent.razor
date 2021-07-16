@@ -1,0 +1,81 @@
+
+@namespace MSN.Components
+@using MSN.ViewModel
+@using MSN.Model
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+
+
+<EditForm Model="@Model">
+    @if (Model.CurrentNote != null && Model.CurrentNote.Visible)
+    {
+        <div class="row-75">
+            <div class="col">
+                <div class="row">
+                    <div class="col"> @Model.CurrentNote.DateCreated.ToShortDateString() </div>
+                    <div class="col "> @Model.CurrentNote.DateCreated.ToShortTimeString() </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <p class="w-75"> @Model.CurrentNote.Title</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12 mt-3">
+                        <p class="w-75">@Model.CurrentNote.Text</p>
+                    </div>
+                </div>
+
+                @if (IsAuthenticated)
+                {
+                    <div class="row">
+                        <div class="col">
+                            <p>
+                                <button class="btn btn-sm  font-weight-bold  text-primary bg-transparent" @onclick="GoToEdit">Edit</button>
+                            </p>
+                        </div>
+                        <div class="col"> <p> <button class="btn btn-sm  font-weight-bold  text-danger bg-transparent" @onclick="() => DeleteSelectedEntry()">Delete</button> </p> </div>
+                    </div>
+
+                }
+
+
+
+            </div>
+        </div>
+    }
+
+</EditForm>
+
+@code {
+    [Parameter]
+    public string ItemId { get; set; }
+
+    public NoteViewerViewModel Model { get; set; } = new NoteViewerViewModel();
+    [Parameter]
+    public EventCallback<bool> NoteStateChangedCallback { get; set; } = new EventCallback<bool>();
+    public bool IsAuthenticated { get { return AuthenticationStateProvider.GetAuthenticationStateAsync().Result.User.Identity.IsAuthenticated; } }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(ItemId))
+            Model.SetNote(Guid.Parse(ItemId));
+        else
+            Model.NewNote();
+    }
+
+    protected async void DeleteSelectedEntry()
+    {
+        Model.DeleteCurrentNote();
+        StateHasChanged();
+        await NoteStateChangedCallback.InvokeAsync(true);
+    }
+    protected async void GoToEdit()
+    {
+        Model.SaveCurrentNote();
+        StateHasChanged();
+        await NoteStateChangedCallback.InvokeAsync(true);
+    }
+
+
+}

@@ -1,0 +1,105 @@
+@page "/"
+@using MSN.Components
+@using MSN.Model.Util
+@using System.IO
+@using System.Drawing
+@using System.Drawing.Imaging
+@using MSN.Model
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@if (IsNoUsers)
+{
+    <div class="p-4" style="height: 95vh;">
+    <h3>
+        <NavLink class="text-primary" href="install">
+            Click here to set up your account!
+        </NavLink>
+    </h3>
+</div>
+}
+else
+{
+    <ProfileJumboImagesComponent @ref="ProfileJumboImagesComponent"></ProfileJumboImagesComponent>
+    @if (IsAuthenticated)
+    {
+        <div class="card  p-0 m-0 ">
+    <div class="card-body p-0 m-0">
+        <div class="pb-2">
+            <ul class="nav nav-tabs">
+                <li class="nav-item">
+                    <button class='text-primary @(DisplayTab ==DisplayTabType.StatusPost?"nav-link active":"nav-link")'
+                        @onclick="()=>LoadTab(DisplayTabType.StatusPost)">Status</button>
+                </li>
+                <li class="nav-item">
+                    <button class='text-primary @(DisplayTab ==DisplayTabType.ImagePost?"nav-link active":"nav-link")'
+                        @onclick="()=>LoadTab(DisplayTabType.ImagePost)">Image</button>
+                </li>
+                <li class="nav-item">
+                    <button class='text-primary @(DisplayTab ==DisplayTabType.EventPost?"nav-link active":"nav-link")'
+                        @onclick="()=>LoadTab(DisplayTabType.EventPost)">Event</button>
+                </li>
+            </ul>
+        </div>
+        @if (DisplayTab == DisplayTabType.StatusPost)
+                {
+                    <div id="one" class="col-md-9">
+                        <StatusPostComponent StatusPostStateChangedCallback="StateChanged"></StatusPostComponent>
+                    </div>
+                }
+                else if (DisplayTab == DisplayTabType.ImagePost)
+                {
+                    <div id="two" class="col-md-9">
+                        <ImagePostComponent ImagePostStateChangedCallback="StateChanged"></ImagePostComponent>
+                    </div>
+                }
+                else if (DisplayTab == DisplayTabType.EventPost)
+                {
+                    <div id="two" class="col-md-9">
+                        <EventPostComponent EventPostStateChangedCallback="StateChanged"></EventPostComponent>
+                    </div>
+                }
+
+            </div>
+        </div>
+    }
+    <br />
+    <StatusViewerComponent @ref="SVC"></StatusViewerComponent>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+    [Inject]
+    protected NavigationManager NavigationManager { get; set; }
+    public MessageBoxComponent MessageBoxComponent { get; set; }
+    public StatusViewerComponent SVC { get; set; }
+    public DisplayTabType DisplayTab { get; set; } = DisplayTabType.StatusPost;
+    public bool IsNoUsers { get; set; } = false;
+    public ProfileJumboImagesComponent ProfileJumboImagesComponent { get; set; }
+    public bool IsAuthenticated { get { return authenticationStateTask.Result.User.Identity.IsAuthenticated; } }
+
+    protected void StateChanged(bool firstRender)
+    {
+        SVC.UpdatePosts();
+        LoadTab(DisplayTabType.StatusPost);
+    }
+    protected void LoadTab(DisplayTabType x) => DisplayTab = x;
+    protected void ShowModal()
+    {
+        MessageBoxComponent.ShowModal = true;
+        StateHasChanged();
+    }
+    [Inject]
+    public ServerFileInfo ServerFileInfo { get; set; }
+    [Inject]
+    private MSN.BlazorServer.Data.MSNBlazorServerContext SecurityContext { get; set; }
+    [Inject]
+    private MSN.ModelContext.MSNContext DefaultContext { get; set; }
+    protected override void OnInitialized()
+    {
+        if (!ServerFileInfo.PerformDatabaseCheck(SecurityContext, DefaultContext) &&
+        !NavigationManager.Uri.EndsWith("/install")
+        )
+            NavigationManager.NavigateTo("/install", true);
+    }
+}

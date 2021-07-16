@@ -1,0 +1,116 @@
+
+@namespace MSN.Components
+@using MSN.ViewModel
+@using MSN.Model
+
+<EditForm Model="@Model">
+    <div class="row">
+        <div class="col h2">Posts: </div>
+    </div>
+    <div  class="row row-cols-2 ">
+        @foreach (var item in Model.Entries)
+            switch (item.PostType)
+            {
+                case PostTypes.StatusUpdate:
+                    <div  class="col ">
+                        <StatusUpdateEntryComponent StatusStateChangedCallback="StatusChanged" @ref="StatusUpdateEntryComponent" SummaryViewMode="true" ItemId="@item.Id.ToString()"></StatusUpdateEntryComponent>
+                    </div>
+                    break;
+                case PostTypes.Image:
+                    <div   class="col ">
+                        <ImagePostDisplayComponent ImageStateChangedCallback="StateChanged" ItemId="@item.Id.ToString()"></ImagePostDisplayComponent>
+                    </div>
+                    break;
+                case PostTypes.Album:
+                    <div   class="col ">
+                        <AlbumItemComponent ItemId="@item.Id.ToString()"></AlbumItemComponent>
+                    </div>
+                    break;
+                case PostTypes.Note:
+                    <div   class="col">
+                        <NoteItemComponent NoteStateChangedCallback="StateChanged" SummaryViewMode="true" ItemId="@item.Id.ToString()"></NoteItemComponent>
+                    </div>
+                    break;
+                default:
+                    break;
+                case PostTypes.Event:
+                    <div  class="col ">
+                        <EventComponent EventStateChangedCallback="StatusChanged" SummaryViewMode="true" ItemId="@item.Id.ToString()"></EventComponent>
+                    </div>
+                    break;
+            }
+    </div>
+    @if (Model.Entries.Count==0)
+            {
+                <div class="card">
+                    <div class="card-body">
+                <div class="h5 pl-3">No Posts Made As Of Yet...</div>
+                    </div>
+                </div>
+            }
+    <div class="row-75 mb-2">
+        <div class="col">
+            @if (Model.ShowMore)
+            {
+                @if (isLoading)
+                {
+                    <div class="row m-0 p-0 pt-2 pb-3 w-100 small alert alert-info" style="cursor: wait;">
+                        <div class="col-sm"><span class="btn btn-sm m-0 p-0  font-weight-bold  text-secondary bg-transparent" style="cursor: wait;">Loading...</span></div>
+                    </div>
+                }
+                else
+                {
+                    <div class="row m-0 p-0 pt-2  w-100 small alert alert-info" style="cursor:pointer;" @onclick="LoadOlderPosts">
+                        <div class="col-sm ml-2 m-0 p-0 "><span class="btn h4 m-0 p-0 font-weight-bold  text-secondary bg-transparent" style="cursor:pointer;">Load More...</span></div>
+                    </div>
+                }
+            }
+            else
+                  if (Model.RequestOffset > 0)
+            {
+                <div class="row m-0 p-0  w-100 small alert alert-danger">
+                    <div class="col-sm h4 font-weight-bold  text-secondary bg-transparent mt-2" style="font-size: 1rem;">No More Posts.</div>
+                </div>
+            }
+        </div>
+    </div>
+</EditForm>
+@code
+{
+
+    public StatusViewerViewModel Model { get; set; } = new ();
+    public StatusUpdateEntryComponent StatusUpdateEntryComponent { get; set; }
+    public bool isLoading { get; set; } = false;
+    protected async void LoadOlderPosts()
+    {
+        try
+        {
+            isLoading = true;
+            await Task.Run(Model.LoadOlderPosts);
+        }
+        catch (Exception)
+        {
+
+            throw;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    public void UpdatePosts()
+    {
+        Model.RefreshPostsForNewAddition(); 
+        StateHasChanged();
+    }
+
+    public void StatusChanged(Guid result)
+    {
+    }
+    public void StateChanged(bool result)
+    {
+        UpdatePosts();
+    }
+
+}

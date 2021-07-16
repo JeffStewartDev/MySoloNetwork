@@ -1,0 +1,117 @@
+﻿@using MSN.Model.Util
+
+@if (IsNoUsers)
+{
+    <div class="top-row pl-4 navbar navbar-dark">
+    <span class="navbar-brand" href="">MySoloNetwork</span>
+</div>
+    <div class="nav flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="install" Match="NavLinkMatch.All">
+                <span class="oi oi-chevron-top" aria-hidden="true"></span> Install
+            </NavLink>
+        </div>
+    </div>
+}
+else
+{
+    <div class="top-row pl-4 navbar navbar-dark">
+    <a class="navbar-brand" href="">MySoloNetwork</a>
+    <button class="navbar-toggler" @onclick="ToggleNavMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</div>
+    <div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+        <ul class="nav flex-column">
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                    <span class="oi oi-home" aria-hidden="true"></span> Home
+                </NavLink>
+            </li>
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="notes">
+                    <span class="oi oi-paperclip" aria-hidden="true"></span> Notes
+                </NavLink>
+            </li>
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="albums">
+                    <span class="oi oi-list-rich" aria-hidden="true"></span> Albums
+                </NavLink>
+            </li>
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="history">
+                    <span class="oi oi-script" aria-hidden="true"></span> Calendar
+                </NavLink>
+            </li>
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="about">
+                    <span class="oi oi-shield" aria-hidden="true"></span> About
+                </NavLink>
+            </li>
+            <AuthorizeView>
+                <Authorized>
+                    <li class="nav-item px-3">
+                        <NavLink class="nav-link" href="account">
+                            <span class="oi oi-wrench" aria-hidden="true"></span> Account
+                        </NavLink>
+                    </li>
+                    <li class="nav-item px-3">
+                        <NavLink class="nav-link" href="logout" Match="NavLinkMatch.All">
+                            <span class="oi oi-compass" aria-hidden="true"></span>
+                            Log Out
+                        </NavLink>
+                    </li>
+                </Authorized>
+                <NotAuthorized>
+                    <li class="nav-item px-3">
+                        <NavLink class="nav-link" href="loginsm" Match="NavLinkMatch.All">
+                            <span class="oi oi-compass" aria-hidden="true"></span>
+                            Log In
+                        </NavLink>
+                    </li>
+                </NotAuthorized>
+            </AuthorizeView>
+        </ul>
+    </div>
+}
+
+
+@code {
+    [Inject]
+    private MSN.BlazorServer.Data.MSNBlazorServerContext SecurityContext { get; set; }
+    [Inject]
+    public ServerFileInfo ServerFileInfo { get; set; }
+    [Inject]
+    protected NavigationManager NavigationManager { get; set; }
+    public bool IsNoUsers { get; set; } = false;
+    private bool collapseNavMenu = true;
+
+    private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+    protected override void OnInitialized()
+    {
+        bool AreThereUsers;
+        try
+        {
+            AreThereUsers=(SecurityContext?.Users?.Count() ?? 0) > 0;
+        }
+        catch (System.Exception)
+        {
+            AreThereUsers=false;
+        }
+        if (ServerFileInfo.SecurityContextPresent
+        &&
+        !AreThereUsers
+        &&
+        !NavigationManager.Uri.EndsWith("/install")
+        )
+        {
+            NavigationManager.NavigateTo("/install", true);
+        }
+        IsNoUsers = !AreThereUsers;
+    }
+}

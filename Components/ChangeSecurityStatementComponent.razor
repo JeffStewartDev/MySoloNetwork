@@ -1,0 +1,127 @@
+@namespace MSN.Components
+@using MSN.ViewModel
+@using MSN.BlazorServer.Data
+@using Microsoft.AspNetCore.Identity
+@inject AuthenticationStateProvider authenticationStateProvider
+@inject SignInManager<IdentityUser> signInManager
+@inject UserManager<IdentityUser> userManager
+<EditForm Model="Model"  aria-autocomplete="off" autocomplete="off" OnValidSubmit="ChangeSecurityStatement">
+    <div class="card  card-shadow mb-3">
+        <div class="card-header font-weight-bold">
+            Change Security Statement
+        </div>
+        <div class="card-body">
+            <div class="form-group small">
+                <label for="OldSecurityStatement">Current Security Statement:</label>
+                <InputText aria-autocomplete="off" autocomplete="off" aria-disabled="disabled" disabled @bind-Value="Model.OldSecurityStatement" class="form-control" id="OldSecurityStatement"
+                    placeholder=""></InputText>
+            </div>
+            <div class="form-group small">
+                <label for="NewSecurityStatement">New Security Statement</label>
+                <InputText aria-autocomplete="off" autocomplete="off"  @bind-Value="Model.NewSecurityStatement" class="form-control" id="NewSecurityStatement"
+                    placeholder=""></InputText>
+            </div>
+            <div class="form-group small">
+                <label for="ConfirmNewSecurityStatement">Confirm New Security Statement</label>
+                <InputText aria-autocomplete="off" autocomplete="off"  @bind-Value="Model.ConfirmNewSecurityStatement" class="form-control"
+                    id="ConfirmNewSecurityStatement" placeholder=""></InputText>
+            </div>
+        </div>
+
+        <div class="card-footer">
+            <button type="submit" class="btn btn-primary">Change</button>
+        </div>
+    </div>
+</EditForm>
+@code
+{
+
+
+
+    public SecurityStatementViewModel Model { get; set; } = new SecurityStatementViewModel();
+    [Inject]
+    protected NavigationManager NavigationManager { get; set; }
+    [Inject]
+    protected MSNBlazorServerContext Context { get; set; }
+
+    protected void RedirectTo(string redirectPath)
+    {
+        NavigationManager.NavigateTo(redirectPath, true);
+    }
+    protected async Task ChangeSecurityStatement()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(Model.NewSecurityStatement) ||
+            string.IsNullOrWhiteSpace(Model.ConfirmNewSecurityStatement))
+            {
+                throw new Exception("All Security Statement fields are required.");
+            }
+            if (!Model.NewSecurityStatement.Equals(Model.ConfirmNewSecurityStatement, StringComparison.CurrentCulture))
+            {
+                throw new Exception("New Security Statement and Confirm Security Statement do not match.");
+            }
+            AuthenticationState authstate = await authenticationStateProvider.GetAuthenticationStateAsync();
+            var user = await userManager.GetUserAsync(authstate.User);
+            if (user == null)
+            {
+                throw new Exception($"Unable to load user with ID '{userManager.GetUserId(authstate.User)}'.");
+            }
+            bool result = false;
+            var userStatement = Context.SecurityStatements.Where(x => x.AspNetUsersID.Equals((new Guid(user.Id)))).FirstOrDefault();
+            if (userStatement != null)
+            {
+                userStatement.Statement = Model.NewSecurityStatement;
+                Context.SaveChanges();
+                result = true;
+            }
+            if (result)
+            {
+                await MessageBox("Security Statement Changed Successfully.");
+                Model = new();
+                await RefreshModel();
+            }
+            else
+                await MessageBox("Error: Security Statement NOT Successfully Changed.");
+
+        }
+        catch (Exception ex)
+        {
+            await MessageBox(ex.Message);
+        }
+    }
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await RefreshModel();
+    }
+    protected async Task RefreshModel()
+    {
+        if (string.IsNullOrWhiteSpace(Model.OldSecurityStatement))
+        {
+            AuthenticationState authstate = await authenticationStateProvider.GetAuthenticationStateAsync();
+            var user = await userManager.GetUserAsync(authstate.User);
+            if (user != null)
+            {
+                var securityStatement = Context.SecurityStatements.Where(x => x.AspNetUsersID.Equals((new Guid(user.Id))
+                )).FirstOrDefault();
+                if (securityStatement != null)
+                    Model.OldSecurityStatement = securityStatement.Statement;
+            }
+        }
+
+
+    }
+    [Inject]
+    public Microsoft.JSInterop.IJSRuntime jSRuntime { get; set; }
+    protected async Task MessageBox(string Message)
+    {
+        await jSRuntime.InvokeVoidAsync("alert", Message);
+    }
+    protected async ValueTask<bool> ConfirmBox(string Message)
+    {
+        return await jSRuntime.InvokeAsync<bool>("confirm", Message);
+    }
+
+}

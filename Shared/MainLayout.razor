@@ -1,0 +1,47 @@
+@inherits LayoutComponentBase
+@using MSN.ModelContext
+@using MSN.BlazorServer.Data
+@using MSN.Model.Util;
+@inject AuthenticationStateProvider AuthenticationStateProvider
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <div class="main">
+        <div class="content px-4">
+            <div style="min-height: 100vh;">
+                @Body
+            </div>
+            <footer class="footer border-top small pl-2 text-muted">
+                <div class="row">
+                    <div class="col">
+                        &copy; 2021 @(DateTime.Now.Year > 2021 ? $" - {DateTime.Now.Year}" : string.Empty)
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Inject]
+    private MSNBlazorServerContext SecurityContext { get; set; }
+    [Inject]
+    private MSN.ModelContext.MSNContext DefaultContext { get; set; }
+    [Inject]
+    private MSNContext Context { get; set; }
+    [Inject]
+    protected NavigationManager NavigationManager { get; set; }
+    [Inject]
+    public ServerFileInfo ServerFileInfo { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (!ServerFileInfo.PerformDatabaseCheck(SecurityContext, DefaultContext) &&
+        !NavigationManager.Uri.EndsWith("/install")
+        )
+            NavigationManager.NavigateTo("/install", true);
+
+    }
+}

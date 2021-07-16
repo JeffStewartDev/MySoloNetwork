@@ -1,0 +1,303 @@
+@namespace MSN.Components
+@using MSN.ViewModel
+@using MSN.Model
+@using System
+@using System.IO
+@using Microsoft.AspNetCore.Hosting
+@using Microsoft.Extensions.Logging
+@inject IWebHostEnvironment Environment
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+
+
+        @if (IsLoading)
+        {
+                        <div class="modal-backdrop show"></div> <!-- Modal -->
+                        <div class="modal fade show " style="padding-right: 17px; display: block;" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="false">
+                            <div class="modal-dialog"style="max-width:300px;">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <div class="modal-title" id="myModalLabel">
+                                            <div class="row"> <div class="col">Saving Album</div> </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="card-body">
+                                            <span>One Moment...</span>
+                                        </div>
+                                    </div>
+                                </div><!-- /.modal-content -->
+                            </div>
+                            <!-- /.modal -->
+                        </div>
+
+                        
+        }
+
+<EditForm Model="@Model">
+    <div class="card m-5">
+        <div class="card-body">
+            <div class="row">
+                <div class="col">
+                    <div class=" h1 mb-5">
+                        <span>@(string.IsNullOrWhiteSpace(ItemId) ?"New": "Edit")</span> Album:
+                    </div>
+                    @if (IsAuthenticated)
+                    {
+                        @if (isUploading)
+                        {
+
+                        <div class="modal-backdrop show"></div> <!-- Modal -->
+                        <div class="modal fade show " style="padding-right: 17px; display: block;" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="false">
+                            <div class="modal-dialog"style="max-width:800px;">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <div class="modal-title" id="myModalLabel">
+                                            <div class="row"> <div class="col">Loading Images: </div> </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="card-body">
+                                        <div class="">
+                                            <span>@($"{SuccessfulUploads} of {ImagesToUpload} Files Loaded.")</span>
+                                            <ul>
+                                                <li>Successful: @SuccessfulUploads</li>
+                                                <li>Unsuccessful: @UnsuccessfulUploads</li>
+                                        @if(isFinishedUploading)
+                                        {
+                                                <li><span  class="text-success font-weight-bold h5">Complete!</span></li>
+                                        }
+                                        else
+                                        {
+                                                <li><span  class="text-error font-weight-bold h5">Loading..</span></li>
+                                        }
+                                            </ul>
+                                            
+                                        </div>
+                                        @if(!string.IsNullOrWhiteSpace(UploadResult))
+                                        {
+                                            <div class="">
+                                                <div class="">Details</div>
+                                                <InputTextArea aria-readonly="true" readonly @bind-Value="@UploadResult">                                                    
+                                                </InputTextArea>
+                                            </div>
+                                        }
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <div class="row m-0 p-0 small">
+                                            
+                                        @if(isFinishedUploading){
+                                            <div class="">
+                                                <button class="btn btn-primary  font-weight-bold " @onclick="CloseModal">Close</button>
+                                            </div>
+                                        }
+                                        </div>
+                                    </div>
+                                </div><!-- /.modal-content -->
+                            </div>
+                            <!-- /.modal -->
+                        </div>
+
+                        }
+                        <div class="h5">Upload Images:</div>
+                        @if (Model?.AlbumImageModel?.ImageFiles?.Count > 0)
+                        {
+                            <div>@Model.AlbumImageModel.ImageFiles.Count Image Files Ready To Upload.</div>
+                        }
+                        <div class="mb-5"
+                        style="display: @(Model?.AlbumImageModel?.ImageFiles?.Count > 0 ? "none":"inherit");">
+                            <div>
+                                <ul>
+                                    <li>@maxAllowedFiles images can be uploaded at a time.</li>
+                                    <li>Maximum image file size: @maxFileSize.ToString("00,000,000") bytes (@(maxFileSize/1000000) MB).</li>
+                                </ul>
+                            </div>
+                            <InputFile OnChange="HandleFileSelected" Multiple />
+                        </div>
+                        @* @if (Model.CurrentAlbum != null)
+                        {
+                            foreach (ImagePost item in Model.CurrentAlbum.ImagePosts)
+                            {
+                                <ImagePostDisplayComponent Image="item"></ImagePostDisplayComponent>
+                            }
+                        } *@
+                        <div class="row">
+                            <div class="col">Name: </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <InputText class="w-75" @bind-Value="Model.CurrentAlbum.Name"></InputText>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">Comment: </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <InputTextArea rows="5" class="w-75" @bind-Value="Model.CurrentAlbum.Comment">
+                                </InputTextArea>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <p> <button class="btn btn-primary  font-weight-bold " @onclick="PostAlbum">Save</button>
+                                </p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+</EditForm>
+@code
+{
+    [Inject]
+    public MSN.Model.Util.ServerFileInfo fileInfo { get; set; }
+    [Parameter]
+    public string ItemId { get; set; }
+    public string UploadResult { get; set; }
+    public AlbumViewerViewModel Model { get; set; } = new AlbumViewerViewModel();
+    public bool IsAuthenticated
+    {
+        get
+        {
+            return AuthenticationStateProvider.GetAuthenticationStateAsync().Result.User.Identity.IsAuthenticated;
+        }
+    }
+    [Inject]
+    protected NavigationManager NavigationManager { get; set; }
+
+    protected long maxFileSize = 1024 * 10000;
+    protected int maxAllowedFiles = MSN.ViewModel.Util.Constants.MaxAllowedFiles;
+    protected int SuccessfulUploads { get; set; }
+    protected int UnsuccessfulUploads { get; set; }
+    protected int ImagesToUpload { get; set; }
+    protected bool isUploading;
+    protected bool isFinishedUploading;
+
+    protected bool IsLoading;
+    
+    protected void CloseModal(){
+        isUploading=false;
+        isFinishedUploading=true;
+    }
+    protected void RedirectTo(string redirectPath)
+    {
+        NavigationManager.NavigateTo(redirectPath, true);
+    }
+    async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        UploadResult = string.Empty;
+        isFinishedUploading = false;
+        isUploading  = true;
+        Model.AlbumImageModel.ImageFiles.Clear();
+        try
+        {
+            IReadOnlyList<IBrowserFile> files = e.GetMultipleFiles(maximumFileCount: maxAllowedFiles);
+            ImagesToUpload = files.Count;
+            foreach (var file in files)
+            {
+                try
+                {
+
+                    var trustedFileNameForFileStorage = Path.GetRandomFileName();
+                    var path = Path.Combine(fileInfo.UnsafeImagesRootFolder, trustedFileNameForFileStorage);
+
+                    await using FileStream fs = new(path, FileMode.Create);
+                    await file.OpenReadStream(maxFileSize).CopyToAsync(fs);
+                    Model.AlbumImageModel.ImageFiles.Add(path);
+                    SuccessfulUploads++;
+                    StateHasChanged();
+                    await fs.DisposeAsync();
+                }
+                catch (Exception ex)
+                {
+                    UnsuccessfulUploads++;
+                    System.Text.StringBuilder sb = new System.Text.StringBuilder(UploadResult);
+                    sb.AppendLine($"{{File: {file.Name} Error: {ex.Message}}}, ");
+                    UploadResult=sb.ToString();
+                }
+            }
+        }
+        catch(Exception ex)
+        {
+                    System.Text.StringBuilder sb = new System.Text.StringBuilder(UploadResult);
+                    sb.AppendLine($"{{Error Occurred: {ex.Message}}}, ");
+                    UploadResult=sb.ToString();
+        }
+        finally
+        {
+            isFinishedUploading=true;
+                    StateHasChanged();
+        }
+    }
+
+    protected async Task PostAlbum()
+    {
+        if(IsLoading)
+            return;
+        bool isSuccess=false;
+        try
+        {
+            IsLoading=true;
+            await Task.Run(SmallSleep);
+            if (string.IsNullOrWhiteSpace(Model?.CurrentAlbum?.Name))
+            {
+                await MessageBox("Album Name is required.");
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(Model?.CurrentAlbum?.Comment))
+            {
+                await MessageBox("Album Comment is required.");
+                return;
+            }
+            if (Model?.AlbumImageModel?.ImageFiles?.Count == 0 &&
+            Model?.CurrentAlbum?.ImagePosts?.Count() == 0)
+            {
+                await MessageBox("You must upload at least one image.");
+                return;
+            }
+            int result = await Model.PostAlbumAsync(fileInfo, NavigationManager);
+            if (Model?.AlbumImageModel?.ImageFiles?.Count != 0)
+            {
+                await MessageBox($"{result} of {Model?.AlbumImageModel?.ImageFiles?.Count} images successfully uploaded.{(Model?.AlbumImageModel?.ImageFiles?.Count == result ? string.Empty : " At least one file was not valid. You may want to try again.")}");
+            }
+            isSuccess=true;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+        if (isSuccess)
+            RedirectTo("/albums");
+
+
+    }
+    protected void SmallSleep()=>System.Threading.Thread.Sleep(10);
+    protected override void OnParametersSet()
+    {
+        Guid guid;
+        if (Guid.TryParse(ItemId, out guid))
+        {
+            Model.SetAlbum(guid);
+        }
+        base.OnParametersSet();
+    }
+
+    [Inject]
+    public Microsoft.JSInterop.IJSRuntime jSRuntime { get; set; }
+    protected async Task MessageBox(string Message)
+    {
+        await jSRuntime.InvokeVoidAsync("alert", Message);
+    }
+    protected async ValueTask<bool> ConfirmBox(string Message)
+    {
+        return await jSRuntime.InvokeAsync<bool>("confirm", Message);
+    }
+
+}
