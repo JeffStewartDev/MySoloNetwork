@@ -13,7 +13,7 @@ MySoloNetwork is a totally-free web application, that's designed to assist those
 
 ### Downloading MySoloNetwork:
 
-Pre-Compiled versions of MySoloNetwork for Linux and Windows are available in the **Downloads** folder. If you don't know how to perform the instructions below on your own, you can hire a developer on a freelance site like [UpWork](https://www.upwork.com) to help for a pretty reasonable fee. 
+Pre-Compiled versions of MySoloNetwork for Linux and Windows are available in the **/Download** folder above. If you don't know how to perform the instructions below on your own, you can hire a developer on a freelance site like [UpWork](https://www.upwork.com) to help for a pretty reasonable fee. 
 
 
 ### Running MySoloNetwork:
