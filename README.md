@@ -18,7 +18,7 @@ Pre-Compiled versions of MySoloNetwork for Linux and Windows are available in th
 
 ### Running MySoloNetwork:
 
-1. Download the latest release archive, that's appropriate for your operating system, from the **/Downloads** folder.
+1. Download the latest release archive, that's appropriate for your operating system, from the **/Download** folder above.
 2. Uncompress the downloaded file at the location you desire.
 3. Open a command prompt or terminal window, and navigate to the directory that contains the downloaded files.
 4. Start MySoloNetwork by launching the executable file, located in the directory.
