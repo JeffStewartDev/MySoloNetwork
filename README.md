@@ -11,31 +11,6 @@ MySoloNetwork is a totally-free web application, that's designed to assist those
 2. The user's data stays with them and not sold to third parties. The site can run on the user's computer, without using the Internet. So they can completely unplug from the Internet if you feel you need to.
 3. No advertisements.
 
-### Downloading MySoloNetwork:
-
-Pre-Compiled versions of MySoloNetwork for Linux and Windows are available in the **/Download** folder above. If you don't know how to perform the instructions below on your own, you can hire a developer on a freelance site like [UpWork](https://www.upwork.com) to help for a pretty reasonable fee. 
-
-
-### Running MySoloNetwork:
-
-1. Download the latest release archive, that's appropriate for your operating system, from the **/Download** folder above.
-2. Uncompress the downloaded file at the location you desire.
-3. Open a command prompt or terminal window, and navigate to the directory that contains the downloaded files.
-4. Start MySoloNetwork by launching the executable file, located in the directory.
-    For Windows, type, **MySoloNetwork.exe**
-    For Linux, type, **./MySoloNetwork**  
-5. Further details will print on the terminal, detailing how to access MySoloNetwork from your web browser
-    Example:
-        *Now listening on: https://localhost:5001*
-6. Copy the website address into your web browser to start using MySoloNetwork. You must keep the command prompt/terminal screen open (minimized, if you desire) while using the site.
-
-
-### Stopping MySoloNetwork:
-
-To stop MySoloNetwork, follow the instructions on the command prompt/terminal:
-    Example:
-        Application started. **Press Ctrl+C to shut down.**
-
 ### MySoloNetwork's Purpose:
 
 **Social Media Replacement**
